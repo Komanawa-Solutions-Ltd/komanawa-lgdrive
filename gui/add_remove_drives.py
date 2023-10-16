@@ -8,7 +8,6 @@ from PyQt6 import QtGui, QtWidgets, QtCore
 
 class AddRmDrives(QtWidgets.QWidget):
     submitClicked = QtCore.pyqtSignal(list)
-    # todo selection mode isn't all moving over... follow up on this
 
     def __init__(self, user, current_drives, available_drives):
         super().__init__()
@@ -142,11 +141,17 @@ class AddRmDrives(QtWidgets.QWidget):
 
     @QtCore.pyqtSlot()
     def on_mBtnMoveToAvailable_clicked(self):
-        self.ActiveDrives.addItem(self.InactiveDrives.takeItem(self.InactiveDrives.currentRow()))
+        change_items = self.InactiveDrives.selectedItems()
+        for item in change_items:
+            self.ActiveDrives.addItem(
+                self.InactiveDrives.takeItem(self.InactiveDrives.row(item)))
 
     @QtCore.pyqtSlot()
     def on_mBtnMoveToSelected_clicked(self):
-        self.InactiveDrives.addItem(self.ActiveDrives.takeItem(self.ActiveDrives.currentRow()))
+        change_items = self.ActiveDrives.selectedItems()
+        for item in change_items:
+            self.InactiveDrives.addItem(
+                self.ActiveDrives.takeItem(self.ActiveDrives.row(item)))
 
     @QtCore.pyqtSlot()
     def on_mButtonToAvailable_clicked(self):
