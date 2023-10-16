@@ -11,7 +11,9 @@ sys.path.append(Path(__file__).parents[1])
 from path_support import icon_path, tray_app_state_path
 from gui.add_user_gui import AddUser
 from gui.add_remove_drives import AddRmDrives
+from gui.rm_user_gui import RmUser
 
+# todo GUI is good enough for now, next step is the funcitonality.
 
 class GoogleDriveTrayApp:
     menu_keys = (
@@ -24,21 +26,24 @@ class GoogleDriveTrayApp:
     }
 
     def __init__(self, app):
+        tray_app_state_path.unlink(True)  # todo DADB
         if tray_app_state_path.exists():
             with open(tray_app_state_path, 'r') as f:
-                pass  # todo read/write state
-
-        self.user_drives = {
-            'test@test.com' :[] # todo DADB
-        }
-        self.users = [
-            'test@test.com'  # todo DADB
-        ]
-        self.users_authenticated = {
-            'test@test.com': True # todo DADB
-        }
-
-        # todo test that the users are authenticated
+                pass  # todo read state
+            self.users = []  # todo set
+            self.user_drives = {}  # todo set
+            self.users_authenticated = {u: self.test_user_auth(u) for u in self.users}
+            raise NotImplementedError
+        else:
+            self.user_drives = {
+                'test@test.com': []  # todo DADB
+            }
+            self.users = [
+                'test@test.com'  # todo DADB
+            ]
+            self.users_authenticated = {
+                'test@test.com': True  # todo DADB
+            }
 
         self.event = Event()
         self.app = app
@@ -47,7 +52,6 @@ class GoogleDriveTrayApp:
         self.tray.setIcon(icon)
         self.tray.setVisible(True)
         self.create_menu()
-
 
     def create_menu(self):
         print('creating menu')
@@ -86,12 +90,12 @@ class GoogleDriveTrayApp:
         self.create_menu()
 
     def _auth_user_window(self, user):  # todo
-        # todo dropdown window to select user then authenticate
+        # todo then authenticate
         raise NotImplementedError
 
     def authenticate_user(self):
         # todo authenticate user... how to do this?
-        self.create_menu() # todo needs to be updated
+        self.create_menu()
 
     def _add_remove_drive_window(self, user):
 
@@ -103,7 +107,7 @@ class GoogleDriveTrayApp:
 
     def add_rm_drives(self, drives):
         user = drives[0]
-        if len(drives)>1:
+        if len(drives) > 1:
             if drives[1] is None:
                 return
 
@@ -113,14 +117,34 @@ class GoogleDriveTrayApp:
         else:
             print(f'removing all drives for: {user}')
             # todo do stuff
-    def _remove_user_window(self, user):  # todo a are you sure... yes.. remove user
-        raise NotImplementedError
 
-    def list_user_drives(self, user): # todo user rclone
+    def _remove_user_window(self, user):
+        print(f"Removing user: {user}")
+        self.sub_window_rmuser = RmUser(user)
+        self.sub_window_rmuser.submitClicked.connect(self.rm_user)
+        self.sub_window_rmuser.show()
+
+    def rm_user(self, data):
+        rm, user = data
+        if rm:
+            # todo remove user from rclone etc.
+            print(f"Removing user: {user}")
+            self.users.remove(user)
+            self.user_drives.pop(user)
+            self.users_authenticated.pop(user)
+            self.create_menu()
+            pass
+        else:
+            pass  # cancelled
+
+    def list_user_drives(self, user):  # todo user rclone
         # todo look at: https://forum.rclone.org/t/google-drive-list-shared-drives/22955
         # todo remove current drives for the user
-        out = [f'test{i}' for i in range(10)] # todo dadb
+        out = [f'test{i}' for i in range(10)]  # todo dadb
         return out
+
+    def test_user_auth(self, user):  # todo
+        raise NotImplementedError
 
     def close(self):
 
@@ -140,7 +164,7 @@ class UserMenu(QtWidgets.QMenu):  # todo add color for authenicated or not, tran
         super().__init__()
         self.user = user
         self.menu_text = {
-            'auth_user': f'Authenticate {user}', # todo grey out if already authenticated, make sure to update
+            'auth_user': f'Authenticate {user}',
             'add_remove_drive': f'Add / Remove Drive(s) for {user}',
             'remove_user': f'Remove {user}',
         }

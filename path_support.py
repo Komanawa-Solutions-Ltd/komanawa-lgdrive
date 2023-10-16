@@ -12,4 +12,4 @@ google_mount_dir.mkdir(exist_ok=True)
 google_cache_dir = google_mount_dir.joinpath('.cache')
 google_cache_dir.mkdir(exist_ok=True)
 tray_app_state_path = google_mount_dir.joinpath('.trayapp_state')
-icon_path = proj_root.joinpath('gui/kea_icon.png')
+icon_path = proj_root.joinpath('gui/kea_icon.png') # todo update icon
