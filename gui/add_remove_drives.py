@@ -14,8 +14,8 @@ class AddRmDrives(QtWidgets.QWidget):
         super().__init__()
         self.user = user
         lay = self.setup_layout()
-        self.InactiveDrives.addItems(current_drives)
-        self.ActiveDrives.addItems(available_drives)
+        self.InactiveDrives.addItems(available_drives)
+        self.ActiveDrives.addItems(current_drives)
         self.setLayout(lay)
         self.show()
 
@@ -187,11 +187,11 @@ class AddRmDrives(QtWidgets.QWidget):
         return r
 
     def cancel(self):
-        self.submitClicked.emit([None])
+        self.submitClicked.emit([self.user, None])
         self.close()
 
     def done(self):
-        self.submitClicked.emit(self.get_get_active_elements())
+        self.submitClicked.emit([self.user] + self.get_get_active_elements())
         self.close()
 
 

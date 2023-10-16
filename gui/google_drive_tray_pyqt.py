@@ -95,7 +95,9 @@ class GoogleDriveTrayApp:
 
     def _add_remove_drive_window(self, user):
 
-        self.drive_sub = AddRmDrives(user, self.user_drives[user], self.list_user_drives(user))
+        self.drive_sub = AddRmDrives(user=user,
+                                     current_drives=self.user_drives[user],
+                                     available_drives=self.list_user_drives(user))
         self.drive_sub.submitClicked.connect(self.add_rm_drives)
         self.drive_sub.show()
 
@@ -116,6 +118,7 @@ class GoogleDriveTrayApp:
 
     def list_user_drives(self, user): # todo user rclone
         # todo look at: https://forum.rclone.org/t/google-drive-list-shared-drives/22955
+        # todo remove current drives for the user
         out = [f'test{i}' for i in range(10)] # todo dadb
         return out
 
