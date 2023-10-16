@@ -6,36 +6,37 @@ from PyQt6 import QtGui, QtWidgets
 import sys
 from pathlib import Path
 from threading import Event
+
 sys.path.append(Path(__file__).parents[1])
 from path_support import icon_path, tray_app_state_path
 from gui.add_user_gui import AddUser
+from gui.add_remove_drives import AddRmDrives
 
 
 class GoogleDriveTrayApp:
     menu_keys = (
         'add_user',
-        'auth_user',
-        'add_remove_drive',
-        'remove_user',
         'quit',
     )
-    menu_text={
-        'add_user':'Add User',
-        'auth_user':'Authenticate User',
-        'add_remove_drive':'Add / Remove Drive(s)',
-        'remove_user':'Remove User',
-        'quit':'Quit',
+    menu_text = {
+        'add_user': 'Add User',
+        'quit': 'Quit',
     }
-
 
     def __init__(self, app):
         if tray_app_state_path.exists():
             with open(tray_app_state_path, 'r') as f:
                 pass  # todo read/write state
 
-        self.user_drives = {}
-        self.users = []
-        self.users_authenticated = []
+        self.user_drives = {
+            'test@test.com' :[] # todo DADB
+        }
+        self.users = [
+            'test@test.com'  # todo DADB
+        ]
+        self.users_authenticated = {
+            'test@test.com': True # todo DADB
+        }
 
         # todo test that the users are authenticated
 
@@ -45,22 +46,23 @@ class GoogleDriveTrayApp:
         icon = QtGui.QIcon(str(icon_path))
         self.tray.setIcon(icon)
         self.tray.setVisible(True)
-        self._create_menu()
-        self.tray.setContextMenu(self.menu)
+        self.create_menu()
 
 
-
-    def _create_menu(self):
+    def create_menu(self):
+        print('creating menu')
         self.menu_items = {}
-        menu_actions={
-            'add_user':self._add_user_window,
-            'auth_user':self._auth_user_window,
-            'add_remove_drive':self._add_remove_drive_window,
-            'remove_user':self._remove_user_window,
-            'quit':self.close,
+
+        menu_actions = {
+            'add_user': self._add_user_window,
+            'quit': self.close,
         }
 
         self.menu = QtWidgets.QMenu()
+
+        for u in self.users:
+            self.menu_items[u] = t = UserMenu(u, self)
+            self.menu.addMenu(t)
 
         for k in self.menu_keys:
             t = QtGui.QAction(self.menu_text[k])
@@ -68,27 +70,54 @@ class GoogleDriveTrayApp:
             self.menu_items[k] = t
             self.menu.addAction(t)
 
-    def _add_user_window(self): # todo tray working this likange is not... next step
-        self.sub_window = AddUser(self.users)
-        self.sub_window.submitClicked.connect(self.add_user)
-        self.sub_window.show()
+        self.tray.setContextMenu(self.menu)
+
+    def _add_user_window(self):
+        self.sub_window_user = AddUser(self.users)
+        self.sub_window_user.submitClicked.connect(self.add_user)
+        self.sub_window_user.show()
 
     def add_user(self, user):
         print(f"Adding user: {user}")
         self.user_drives[user] = []
         self.users.append(user)
-        self._auth_user_window(user)
+        self.users_authenticated[user] = False
+        # todo enable when ready self._auth_user_window(user)
+        self.create_menu()
 
-
-    def _auth_user_window(self, start_user): # todo
+    def _auth_user_window(self, user):  # todo
         # todo dropdown window to select user then authenticate
         raise NotImplementedError
 
-    def _add_remove_drive_window(self): # todo start here???
+    def authenticate_user(self):
+        # todo authenticate user... how to do this?
+        self.create_menu() # todo needs to be updated
+
+    def _add_remove_drive_window(self, user):
+
+        self.drive_sub = AddRmDrives(user, self.user_drives[user], self.list_user_drives(user))
+        self.drive_sub.submitClicked.connect(self.add_rm_drives)
+        self.drive_sub.show()
+
+    def add_rm_drives(self, drives):
+        user = drives[0]
+        if len(drives)>1:
+            if drives[1] is None:
+                return
+
+            print(f"Adding drives for {user}: {drives[1:]}")
+            # todo do stuff
+
+        else:
+            print(f'removing all drives for: {user}')
+            # todo do stuff
+    def _remove_user_window(self, user):  # todo a are you sure... yes.. remove user
         raise NotImplementedError
 
-    def _remove_user_window(self): # todo
-        raise NotImplementedError
+    def list_user_drives(self, user): # todo user rclone
+        # todo look at: https://forum.rclone.org/t/google-drive-list-shared-drives/22955
+        out = [f'test{i}' for i in range(10)] # todo dadb
+        return out
 
     def close(self):
 
@@ -101,11 +130,53 @@ class GoogleDriveTrayApp:
         pass
 
 
+class UserMenu(QtWidgets.QMenu):  # todo add color for authenicated or not, transmitting??? mouseover???
+    def __init__(self, user, parent):
+        assert isinstance(parent, GoogleDriveTrayApp)
+
+        super().__init__()
+        self.user = user
+        self.menu_text = {
+            'auth_user': f'Authenticate {user}', # todo grey out if already authenticated, make sure to update
+            'add_remove_drive': f'Add / Remove Drive(s) for {user}',
+            'remove_user': f'Remove {user}',
+        }
+
+        self.setTitle(self.user)
+        self.parent = parent
+        self.menu_actions = {
+            'auth_user': self.auth_user,
+            'add_remove_drive': self.add_remove_drive,
+            'remove_user': self.remove_user,
+        }
+        self._create_menu()
+
+    def _create_menu(self):
+        self.menu_items = {}
+        for k in self.menu_text.keys():
+            t = QtGui.QAction(self.menu_text[k])
+            t.triggered.connect(self.menu_actions[k])
+            if k == 'auth_user':
+                t.setEnabled(not self.parent.users_authenticated[self.user])
+            self.menu_items[k] = t
+            self.addAction(t)
+
+    def auth_user(self):
+        self.parent._auth_user_window(self.user)
+
+    def remove_user(self):
+        self.parent._remove_user_window(self.user)
+
+    def add_remove_drive(self):
+        self.parent._add_remove_drive_window(self.user)
+
+
 def launch_panel_app():
     app = QtWidgets.QApplication([])
     app.setQuitOnLastWindowClosed(False)
     GDTA = GoogleDriveTrayApp(app)
     sys.exit(app.exec())
+
 
 if __name__ == '__main__':
     launch_panel_app()
