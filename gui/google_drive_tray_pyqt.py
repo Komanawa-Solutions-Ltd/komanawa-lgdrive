@@ -13,7 +13,9 @@ from gui.add_user_gui import AddUser
 from gui.add_remove_drives import AddRmDrives
 from gui.rm_user_gui import RmUser
 
-# todo GUI is good enough for now, next step is the funcitonality.
+# todo GUI is good enough for now, next step is the functionality.
+# todo add shortcodes info
+# todo rclone mount options
 
 class GoogleDriveTrayApp:
     menu_keys = (
