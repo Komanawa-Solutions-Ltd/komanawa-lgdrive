@@ -4,11 +4,13 @@ on: 17/09/23
 """
 from pathlib import Path
 import subprocess
+import webbrowser
 from path_support import google_mount_dir
-from base_functions import get_user_from_shortcode, join_character, get_rclone_config
+from base_functions import join_character, get_rclone_config, get_drive_export_format
 
 
 def get_google_id(path):
+
     path = Path(path)
     path = path.relative_to(google_mount_dir)
     mount_name = path.parts[0]
@@ -20,8 +22,8 @@ def get_google_id(path):
     code = ' '.join(['rclone',
                      'lsjson',
                      '--drive-impersonate matt@komanawa.com',  # todo testing, do I need impersonate
+                     f'--drive-export-formats {get_drive_export_format()}',  # ensure constant file names
                      '--config', str(rclone_config),
-                     # todo I need the handling of types here, pull from rclone mount options!
                      '--no-mimetype',
                      '--no-modtime',
                      '--fast-list',
@@ -49,25 +51,20 @@ def get_google_id(path):
         return out_id[0], out_mtype[0]
 
 
-def open_in_google_drive(path):
+def open_in_google_drive(path, open=True):
     """
     opens the parent folder in google drive
-    :param path:
+    :param path: path to file or folder
     :return:
     """
-    path = path.parent
+    path = Path(path)
+    if path.is_dir():
+        pass
+    else:
+        path = path.parent
     gid, mtype = get_google_id(path)
     link = f'https://drive.google.com/drive/folders/{gid}'
-    # todo open in browser
-    raise NotImplementedError
-
-
-def copy_google_drive_link(path): # todo link depends on mmime type... dig into this!
-    # todo https://developers.google.com/drive/api/guides/mime-types
-    # todo https://developers.google.com/drive/api/guides/ref-export-formats
-    gid = get_google_id(path)
-    is_sheet =False # todo
-    is_doc = False # todo
-    is_slide = False # todo
-    if is_sheet:
-        raise NotImplementedError
+    if open:
+        webbrowser.open(link, new=0, autoraise=True)
+    else:
+        return link

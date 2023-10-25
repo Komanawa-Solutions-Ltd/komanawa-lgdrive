@@ -4,16 +4,15 @@ on: 17/09/23
 """
 import time
 import warnings
-
 import numpy as np
 import subprocess
-from path_support import google_mount_dir, google_cache_dir, base_configs, short_code_path
+from path_support import google_mount_dir, google_cache_dir, base_configs, short_code_path, mount_options_path, \
+    master_config
 
-join_character = '~' # todo does this character cause problems?
-base_tmux_name = f'*gd{join_character}'+'{}' + join_character + '{}'
+join_character = '~'  # todo does this character cause problems?
+base_tmux_name = f'*gd{join_character}' + '{}' + join_character + '{}'
 
-
-base_mount_options = (
+base_mount_options = ( # todo make several default options... simple complex, high memory, etc.
     '--drive-export-formats link.html',  # manage drive formats so google docs download as .html links
     '--stats=0',  # disables printing of stats
     '--bwlimit=200M',  # up and down limits
@@ -33,15 +32,11 @@ base_mount_options = (
 )  # Max time since last access of objects in the cache (default 1h0m0s)
 
 
-def close_google_dirve():
+def close_google_drive():  # todo
     raise NotImplementedError
 
 
-def restart_google_drive():
-    raise NotImplementedError
-
-
-def get_avalible_shared_drives():
+def get_available_shared_drives():  # todo
     raise NotImplementedError
 
 
@@ -61,11 +56,15 @@ def get_rclone_config(email_address=None, short_code=None):
     return config_path
 
 
-def _create_config(email_address):
+def _create_config(email_address, drives):  # todo
+    # todo list avalible drives at top of file (with comment?)
     raise NotImplementedError
 
 
 def authenticate(email_address):  # todo how?
+    # todo setup My_Drive
+    # todo write/update master config... (this is the config that is used to list all avalbile drives),
+    #   only
     raise NotImplementedError
 
 
@@ -92,11 +91,18 @@ def is_mounted(nm):
 def get_mountpoint_tmux_name(email_address, drive_name):
     shortcode = get_user_shortcode(email_address)
     tmux_nm = base_tmux_name.format(shortcode, drive_name)
-    mp_name = '~'.join([shortcode, drive_name])  # todo does this character cause problems?
+    mp_name = join_character.join([shortcode, drive_name])
     return tmux_nm, mp_name
 
 
-def mount_drive(email_address, drive_name, options=base_mount_options):
+def mount_drive(email_address, drive_name):
+    """
+    mount a google drive in a tmux session
+    :param email_address:
+    :param drive_name:
+    :return:
+    """
+    options = read_options()
     mp_name, tmux_nm = get_mountpoint_tmux_name(email_address, drive_name)
     config_path = get_rclone_config(email_address)
     if is_mounted(drive_name):
@@ -123,25 +129,28 @@ def mount_drive(email_address, drive_name, options=base_mount_options):
         if not is_mounted(drive_name):
             success = False
             error = f'mount failed for {drive_name}'
+        list_paths_mount(tmux_nm)
         return success, error
 
 
-def list_paths_mount():
+def list_paths_mount(tmux_name):
     # todo basically prime start mount so that it's not super laggy when first flying
     # todo look into
     # todo lots of folks rc vfs/refresh recursive=true
     raise NotImplementedError
 
 
-def list_active_drive_mounts():
+def list_active_drive_mounts(): # todo
     raise NotImplementedError
 
+def user_authenticated(email_address=None, shortcode=None): # todo
+    raise NotImplementedError
 
 def get_user_shortcode(email_address):
     return _read_shortcodes()[email_address]
 
 
-def set_user_shortcode(email_address, shortcode=None):
+def add_user_set_shortcode(email_address, shortcode=None):
     # short code to prepend to the mount name (e.g. hm for home users), user defined
     if shortcode is None:
         shortcode = email_address.split('@')[0]
@@ -190,4 +199,56 @@ def _write_shortcodes(short_codes):
 
 
 def list_drives_available(email_address):
+    shortcode = get_user_shortcode(email_address)
+    code = ' '.join(['rclone',
+                     'backend',
+                     'drives',
+                     '--config', str(master_config),
+                     '--drive-impersonate matt@komanawa.com',  # todo do I need this, likely not
+                     f'{shortcode}:'
+                     ])
+    output = subprocess.run(code, capture_output=True, shell=True)
+    assert output.returncode == 0, f'failed to list google drives for {email_address}'
+    out = output.stdout.decode()
+    outdata = {}
+    for line in out.split('\n'):
+        if line != '':
+            line = line.strip()
+            line = line.strip(',{}')
+            temp = {}
+            for e in line.split(','):
+                k = e.split(':')[0].strip('"')
+                v = e.split(':')[1].strip('"')
+                temp[k] = v
+            outdata[temp['name']] = temp
+    return outdata
+
+
+def write_options(options):
+    with mount_options_path.open('w') as f:
+        for line in options:
+            f.write(line + '\n')
+
+
+def read_options():
+    with mount_options_path.open('r') as f:
+        lines = f.readlines()
+    lines = [e.strip('\n') for e in lines]
+    return lines
+
+
+def get_drive_export_format():
+    options = read_options()
+    for line in options:
+        if '--drive-export-formats' in line:
+            return line.split(' ')[1]
+
+
+def _update_master_config(add_email, remove_email): # todo
+    """
+    update the master config file to include add_email and remove remove_email
+    :param add_email:
+    :param remove_email:
+    :return:
+    """
     raise NotImplementedError
