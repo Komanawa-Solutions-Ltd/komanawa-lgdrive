@@ -1,0 +1,8 @@
+# todo or in gdrive for linux
+# from: https://linuxconfig.org/how-to-disable-ipv6-address-on-ubuntu-20-04-lts-focal-fossa
+# in /etc/default/grub
+# FROM:
+# GRUB_CMDLINE_LINUX_DEFAULT=""
+# TO:
+# GRUB_CMDLINE_LINUX_DEFAULT="ipv6.disable=1"  (space delim)
+# sudo update-grub
