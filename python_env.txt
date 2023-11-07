@@ -1,12 +1,10 @@
 # todo fill this out as you create the environment
-# environment was primarily used on [Linux|Windows]
+# environment was primarily used on [Linux]
 
 # initial env creation
 conda create -c conda-forge --name [name] python [packages]
 conda activate [name]
 
-# todo kslcore see the instructions at: https://github.com/Komanawa-Solutions-Ltd/kslcore
-# keynote DO NOT COPY THE pip install command as this can give collaborators access to other repos
 
 # todo save the env and update whenever new packages are added:
 conda list --explicit > [path].txt
