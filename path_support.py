@@ -18,3 +18,4 @@ tray_app_state_path = base_configs.joinpath('.trayapp_state')
 short_code_path = base_configs.joinpath('.short_codes')
 mount_options_path = base_configs.joinpath('.mount_options')
 icon_path = proj_root.joinpath('gui/kea_icon.png') # todo update icon
+mounted_drives = google_mount_dir.joinpath('.mounted_drives')

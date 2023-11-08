@@ -3,8 +3,6 @@ created matt_dumont
 on: 17/09/23
 """
 import time
-import warnings
-import numpy as np
 import subprocess
 from path_support import google_mount_dir, google_cache_dir, base_configs, short_code_path, mount_options_path, \
     master_config
@@ -54,12 +52,9 @@ def get_prebuilt_mount_options(key):
 def close_google_drive():
     """ unmount all drives, raise if drives are still mounted"""
     mount_names = list_active_drive_mounts()
-    mount_names = [get_mountpoint_tmux_name(*get_email_from_mountpoint_tmux_name(tmux_name=nm),
-                                            return_email=False)[1] for nm in mount_names]
-
     for nm in mount_names:
         if is_mounted(nm):
-            unmount_drive(nm)
+            unmount_drive(nm, rm_from_drive_list=False)
 
     for nm in mount_names:
         if is_mounted(nm):
@@ -77,23 +72,41 @@ def get_rclone_config(email_address=None, short_code=None):
 
     config_name = f'.{short_code}.rclone.conf'
     config_path = base_configs.joinpath(config_name)
-    if not config_path.exists():
-        _create_config(email_address)
-
     return config_path
 
 
-def _create_config(email_address, drives):  # todo
+def create_config(email_address):  # todo call in mount_drive
+    # todo add all drives to config
 
+    # return success, message
     raise NotImplementedError
 
 
-def authenticate(email_address):  # todo?
-    # todo setup My_Drive
-    # todo write/update master config... (this is the config that is used to list all avalbile drives),
-    #   only
-    # https://rclone.org/commands/rclone_authorize/
-    raise NotImplementedError
+def get_auth_code(email_address, local=True):
+    code = 'rclone authorize "google cloud storage"'
+    if local:
+        output = subprocess.run(code, capture_output=True, shell=True)
+        assert output.returncode == 0, f'failed to authenticate {email_address}'
+        output = output.stdout.decode()
+    else:
+        output = []
+        code += ' --auth-no-open-browser'
+        process = subprocess.Popen(code, shell=True, stdout=subprocess.PIPE)
+        print_output = True
+        while process.poll() is None:
+            nextline = process.stdout.readline()
+            if nextline == '':
+                continue
+            t = nextline.decode().strip()
+            output.append(t)
+            if 'paste' in t.lower():
+                print_output = False
+            if print_output:
+                print(t)
+
+    output = '\n'.join(output)
+    output = output[output.find('{'):output.find('}') + 1]
+    return output
 
 
 def is_mounted(nm):
@@ -104,9 +117,9 @@ def is_mounted(nm):
     """
     mounted = False
     time.sleep(1)
-    shortcode, drive_name = get_email_from_mountpoint_tmux_name(mp_name=nm)
+    shortcode, raw_drive_name = get_email_from_mountpoint_tmux_name(mp_name=nm)
     # check if tmux session exists
-    tmux_nm, mp_name = get_mountpoint_tmux_name(drive_name, shortcode=shortcode)
+    tmux_nm, mp_name = get_mountpoint_tmux_name(raw_drive_name, shortcode=shortcode)
     assert mp_name == nm, f'{mp_name=} != {nm=}'
     tmux_nm = base_tmux_name.format(nm)  # these are listed in alphabetical order
     tmuxdirs = subprocess.run('tmux ls', capture_output=True, shell=True).stdout.decode()
@@ -125,15 +138,24 @@ def is_mounted(nm):
     return mounted
 
 
-def get_mountpoint_tmux_name(drive_name, shortcode=None, email_address=None):
+def get_mnt_name_from_tmux_name(tmux_name):
+    return tmux_name.split(join_character)[1]
+
+
+def get_tmuxnm_from_mnt_name(mnt_name):
+    shortcode, raw_drive_name = mnt_name.split(join_character)
+    return base_tmux_name.format(shortcode, raw_drive_name)
+
+
+def get_mountpoint_tmux_name(raw_drive_name, shortcode=None, email_address=None):
     if shortcode is None and email_address is None:
         raise ValueError('must provide shortcode or email_address')
 
     if shortcode is None:
         shortcode = get_user_shortcode(email_address)
     assert shortcode is not None
-    tmux_nm = base_tmux_name.format(shortcode, drive_name)
-    mp_name = join_character.join([shortcode, drive_name])
+    tmux_nm = base_tmux_name.format(shortcode, raw_drive_name)
+    mp_name = join_character.join([shortcode, raw_drive_name])
     return tmux_nm, mp_name
 
 
@@ -160,22 +182,25 @@ def get_email_from_mountpoint_tmux_name(tmux_name=None, mp_name=None, return_ema
         return drive_name, shortcode
 
 
-def mount_drive(email_address, drive_name):
+def mount_drive(drivenm):
     """
     mount a google drive in a tmux session
-    :param email_address:
-    :param drive_name:
+    :param drivenm: drive name (shortcode + drive name)
     :return:
     """
     options = read_options()
-    mp_name, tmux_nm = get_mountpoint_tmux_name(drive_name, shortcode=None, email_address=email_address)
-    config_path = get_rclone_config(email_address)
-    if is_mounted(drive_name):
-        print(f'skipping {drive_name} already mounted')
+    tmux_nm = get_tmuxnm_from_mnt_name(drivenm)
+    shortcode, raw_drive_name = get_email_from_mountpoint_tmux_name(tmux_name=tmux_nm)
+    config_path = get_rclone_config(short_code=shortcode)
+    pos_drives = list_drives_available(shortcode=shortcode)
+    assert drivenm in pos_drives, f'{drivenm} not in {pos_drives}'
+
+    if is_mounted(raw_drive_name):
+        print(f'skipping {raw_drive_name} already mounted')
     else:
-        mount_dir = google_mount_dir.joinpath(mp_name)
+        mount_dir = google_mount_dir.joinpath(drivenm)
         mount_dir.mkdir(parents=True, exist_ok=True)
-        cache = google_cache_dir.joinpath(mp_name)
+        cache = google_cache_dir.joinpath(drivenm)
         cache.mkdir(exist_ok=True)
         assert mount_dir.is_dir(), f'mount_dir {mount_dir} is not a dir'
         assert len(list(mount_dir.iterdir())) == 0, f'mount_dir {mount_dir} is not empty'
@@ -183,24 +208,23 @@ def mount_drive(email_address, drive_name):
         # create tmux session for the mount then mount the drive.
         code = ' '.join([
             f"tmux new -s {tmux_nm} -d",  # run in tmux
-            f'rclone -v --drive-impersonate {email_address}',  # todo is this needed without system token?
             f'--config {config_path}',  # email specific config file
             f'--cache-dir {cache}',  # cache dir
             *options,  # mount options
-            f'mount {drive_name}:  {mount_dir}'])
+            f'mount {raw_drive_name}:  {mount_dir}'])
         subprocess.run(code, shell=True)
         success = True
         error = ''
-        if not is_mounted(drive_name):
+        if not is_mounted(raw_drive_name):
             success = False
-            error = f'mount failed for {drive_name}'
-        list_paths_mount(tmux_nm)
+            error = f'mount failed for {raw_drive_name}'
+        # todo need to write to mounted drives file
+        prime_mount(tmux_nm)
         return success, error
 
 
-def list_paths_mount(tmux_name):
+def prime_mount(tmux_name):
     # todo basically prime start mount so that it's not super laggy when first flying
-    # todo look into
     # todo lots of folks rc vfs/refresh recursive=true
     raise NotImplementedError
 
@@ -212,25 +236,33 @@ def list_active_drive_mounts():
     """
     tmuxdirs = subprocess.run('tmux ls', capture_output=True, shell=True).stdout.decode()
     tmuxdirs = tmuxdirs.split('\n')
-    tmuxdirs = [e.split(':')[0] for e in tmuxdirs]
-    return tmuxdirs
+    tmuxdirs = [e.split(':')[0] for e in tmuxdirs]  # todo exclude other tmux paths
+    base_name = base_tmux_name.split('{')[0]
+    tmuxdirs = [e for e in tmuxdirs if base_name == e[:len(base_name)]]
+    mnt_names = [get_mnt_name_from_tmux_name(e) for e in tmuxdirs]
+    return mnt_names
 
 
-def user_authenticated(email_address=None, shortcode=None):  # todo
-    raise NotImplementedError
+def user_authenticated(email_address=None, shortcode=None):
+    try:
+        if email_address is not None:
+            list_drives_available(email_address)
+        elif shortcode is not None:
+            list_drives_available(get_user_from_shortcode(shortcode))
+        else:
+            raise ValueError('must provide email_address or shortcode')
+        return True
+    except AssertionError:
+        return False
 
 
 def get_user_shortcode(email_address):
-    return _read_shortcodes()[email_address]
+    return read_shortcodes()[email_address]
 
 
-def add_user_set_shortcode(email_address, shortcode=None):
-    # short code to prepend to the mount name (e.g. hm for home users), user defined
-    if shortcode is None:
-        shortcode = email_address.split('@')[0]
-    short_codes = _read_shortcodes()
+def check_shortcode(shortcode, short_codes):
     inv = {v: k for k, v in short_codes.items()}
-    bad_chars = [' ', '\t', '\n', '\r', '/', '\\', '?', '<', '>', '|', ':', '*', '"', "'", '=']
+    bad_chars = [' ', '\t', '\n', '\r', '/', '\\', '?', '<', '>', '|', ':', '*', '"', "'", '=', join_character]
     success = True
     mssage = ''
     if shortcode in short_codes.values():
@@ -242,19 +274,28 @@ def add_user_set_shortcode(email_address, shortcode=None):
     elif shortcode[0] == '-':
         success = False
         mssage = f'cannot start with "-"'
-    else:
+    return success, mssage
+
+
+def add_user_set_shortcode(email_address, shortcode=None):
+    # short code to prepend to the mount name (e.g. hm for home users), user defined
+    if shortcode is None:
+        shortcode = email_address.split('@')[0]
+    short_codes = read_shortcodes()
+    success, mssage = check_shortcode(shortcode, short_codes)
+    if success:
         short_codes[email_address] = shortcode
-        _write_shortcodes(short_codes)
+        write_shortcodes(short_codes)
     return success, mssage
 
 
 def get_user_from_shortcode(shortcode):
-    t = _read_shortcodes()
+    t = read_shortcodes()
     t = {v: k for k, v in t.items()}
     return t[shortcode]
 
 
-def _read_shortcodes():
+def read_shortcodes():
     if not short_code_path.exists():
         return {}
     with short_code_path.open('r') as f:
@@ -266,26 +307,28 @@ def _read_shortcodes():
     return out
 
 
-def _write_shortcodes(short_codes):
+def write_shortcodes(short_codes):
     with short_code_path.open('w') as f:
         for k, v in short_codes.items():
             f.write(f'{k}={v}\n')
 
 
-def list_drives_available(email_address):
+def list_drives_available(email_address=None, shortcode=None):
     """
     get possible drives that could be mounted for a given email address
     :param email_address:
     :return: dict of drive names and info
     {drivename(inc short code): {id:###, kind:###, name:###(w/o shortcode), shortcode:###}}
     """
-    shortcode = get_user_shortcode(email_address)
+    if shortcode is None and email_address is None:
+        shortcode = get_user_shortcode(email_address)
+    assert shortcode is not None, 'must provide shortcode or email_address'
+
     code = ' '.join(['rclone',
                      'backend',
                      'drives',
                      '--config', str(master_config),
-                     '--drive-impersonate matt@komanawa.com',  # todo do I need this, likely not
-                     f'{shortcode}:'
+                     f'{shortcode}:' # todo probably better if this is the emailaddress
                      ])
     output = subprocess.run(code, capture_output=True, shell=True)
     assert output.returncode == 0, f'failed to list google drives for {email_address}'
@@ -326,18 +369,27 @@ def get_drive_export_format():
             return line.split(' ')[1]
 
 
-def _update_master_config(add_email, remove_email):  # todo
+def update_master_config(add_email, remove_email):  # todo
     """
     update the master config file to include add_email and remove remove_email
     :param add_email:
     :param remove_email:
     :return:
     """
+    # todo note that add email will also be used to re-authenticate
+    # todo authenticate here
+    # # todo master config name = shortcode or username, or something else, propogate decision through
     raise NotImplementedError
 
 
-def unmount_drive(nm):
+def list_users():
+    return list(read_shortcodes().keys())
+
+
+def unmount_drive(nm, rm_from_drive_list=True):
     mount_dir = google_mount_dir.joinpath(nm)
     code = f"umount {mount_dir}"
     output = subprocess.run(code, shell=True)
+    if rm_from_drive_list:
+        raise NotImplementedError # todo remove drive name from list
     return output.returncode == 0
