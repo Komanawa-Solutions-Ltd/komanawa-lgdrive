@@ -5,8 +5,8 @@ on: 9/11/23
 from copy import deepcopy
 import sys
 from PyQt6 import QtGui, QtWidgets, QtCore
-from utils.base_functions import check_shortcode, bad_shortcode_char
 from utils.util_functions import LGDrive
+from path_support import icon_path
 
 
 # keynote this class can be changed in the gooogle_drive_tray_pyqt class call to allow user specific
@@ -16,6 +16,8 @@ class Gpath(QtWidgets.QWidget):
 
     def __init__(self):
         super().__init__()
+        self.setWindowIcon(QtGui.QIcon(str(icon_path)))
+        self.setWindowTitle('Google Path support')
         self.resize(500, 100)
         self.lgdrive = LGDrive()
         # frame box
@@ -66,6 +68,8 @@ class Gpath(QtWidgets.QWidget):
 
     def _launch_error(self, message):
         mbox = QtWidgets.QMessageBox()
+        mbox.setWindowIcon(QtGui.QIcon(str(icon_path)))
+        mbox.setWindowTitle('Whoops!')
         mbox.setText(message)
         mbox.setFont(self.font)
         mbox.setStyleSheet(self.sheetstyle)

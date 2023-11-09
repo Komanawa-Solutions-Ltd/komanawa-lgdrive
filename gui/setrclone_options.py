@@ -6,7 +6,7 @@ on: 9/11/23
 from PyQt6 import QtGui, QtWidgets, QtCore
 from utils.base_functions import ava_mount_options
 from utils.util_functions import LGDrive
-from path_support import mount_options_path
+from path_support import mount_options_path, icon_path
 
 
 class SetMntOptions(QtWidgets.QWidget):
@@ -14,6 +14,8 @@ class SetMntOptions(QtWidgets.QWidget):
 
     def __init__(self):
         super().__init__()
+        self.setWindowIcon(QtGui.QIcon(str(icon_path)))
+        self.setWindowTitle('Google Path support')
         self.resize(500, 100)
         self.lgdrive = LGDrive()
         # frame box
@@ -54,4 +56,3 @@ class SetMntOptions(QtWidgets.QWidget):
         # todo kinda need a popup window that says remounting drives... or something
         self.submitClicked.emit([self.remount.isChecked(), self.mount_options.currentText()])
         self.close()
-

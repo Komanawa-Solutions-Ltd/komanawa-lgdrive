@@ -117,7 +117,7 @@ def create_config(email_address):
                 'root_folder_id =\n'
                 '#end\n\n')
             f.write(out_text_team)
-    config_path.chmod(600)
+    config_path.chmod(33152)
 
 
 def get_auth_code(email_address, local=True):
@@ -358,7 +358,7 @@ def write_shortcodes(short_codes):
     with short_code_path.open('w') as f:
         for k, v in short_codes.items():
             f.write(f'{k}={v}\n')
-    short_code_path.chmod(600)
+    short_code_path.chmod(33152)
 
 def list_drives_available(email_address=None, shortcode=None):
     """
@@ -416,7 +416,7 @@ def write_options(options):
     with mount_options_path.open('w') as f:
         for line in options:
             f.write(line + '\n')
-    mount_options_path.chmod(600)
+    mount_options_path.chmod(33152)
 
 def read_options():
     with mount_options_path.open('r') as f:
@@ -469,7 +469,7 @@ def update_master_config(add_email=None, remove_email=None, local=True):
                 f'root_folder_id = {data["root_folder_id"]}\n'
                 '#end\n\n')
             f.write(out_text)
-    master_config.chmod(600)
+    master_config.chmod(33152)
 
 def read_master_config():
     """
@@ -550,7 +550,7 @@ def update_mounted_drives(add_drive=None, remove_drive=None):
     with mounted_drives_path.open('w') as f:
         for line in mnt_dirs:
             f.write(line + '\n')
-    mounted_drives_path.chmod(600)
+    mounted_drives_path.chmod(33152)
 
 def list_drives_in_config(config_path):
     with config_path.open('r') as f:

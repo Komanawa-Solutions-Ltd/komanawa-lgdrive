@@ -208,6 +208,8 @@ class GoogleDriveTrayApp:
 
     def _launch_error(self, message):
         mbox = QtWidgets.QMessageBox()
+        mbox.setWindowIcon(QtGui.QIcon(str(icon_path)))
+        mbox.setWindowTitle('whoops!')
         mbox.setText(message)
         mbox.setFont(self.font)
         mbox.setStyleSheet(self.sheetstyle)
@@ -272,6 +274,8 @@ def launch_panel_app():
     GDTA = GoogleDriveTrayApp(app)
     sys.exit(app.exec())
 
+
+# todo enable client id
 
 if __name__ == '__main__':
     launch_panel_app()

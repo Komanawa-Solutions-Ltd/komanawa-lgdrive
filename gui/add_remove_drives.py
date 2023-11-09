@@ -4,6 +4,7 @@ on: 17/10/23
 """
 import sys
 from PyQt6 import QtGui, QtWidgets, QtCore
+from path_support import icon_path
 
 
 class AddRmDrives(QtWidgets.QWidget):
@@ -11,6 +12,8 @@ class AddRmDrives(QtWidgets.QWidget):
 
     def __init__(self, user, current_drives, available_drives):
         super().__init__()
+        self.setWindowIcon(QtGui.QIcon(str(icon_path)))
+        self.setWindowTitle('Add/Remove Drives')
         self.user = user
         lay = self.setup_layout()
         self.InactiveDrives.addItems(available_drives)

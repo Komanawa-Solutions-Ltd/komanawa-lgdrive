@@ -345,3 +345,5 @@ class LGDrive():
         drives = read_mounted_drives()
         for drive in drives:
             self.mount_drive(drive)
+
+# todo enable client id

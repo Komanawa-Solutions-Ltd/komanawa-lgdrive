@@ -7,6 +7,7 @@ from copy import deepcopy
 import sys
 from PyQt6 import QtGui, QtWidgets, QtCore
 from utils.base_functions import check_shortcode, bad_shortcode_char
+from path_support import icon_path
 
 
 class AddUser(QtWidgets.QWidget):
@@ -14,6 +15,8 @@ class AddUser(QtWidgets.QWidget):
 
     def __init__(self, existing_users):
         super().__init__()
+        self.setWindowIcon(QtGui.QIcon(str(icon_path)))
+        self.setWindowTitle('Add User')
         for u in existing_users:
             assert type(u) == str
             assert '@' in u
@@ -77,6 +80,8 @@ class AddUser(QtWidgets.QWidget):
 
         if problem:
             mbox = QtWidgets.QMessageBox()
+            mbox.setWindowIcon(QtGui.QIcon(str(icon_path)))
+            mbox.setWindowTitle('whoops!')
             mbox.setText(mssage)
             mbox.setFont(self.font)
             mbox.setStyleSheet(self.sheetstyle)
@@ -87,11 +92,13 @@ class AddUser(QtWidgets.QWidget):
         self.close()
 
 
-class ChangeShortcode(QtWidgets.QWidget):
+class ChangeShortcode(QtWidgets.QWidget): # todo not showing up, fix/test
     submitClicked = QtCore.pyqtSignal(list)
 
     def __init__(self, user, current_shortcode):
         super().__init__()
+        self.setWindowIcon(QtGui.QIcon(str(icon_path)))
+        self.setWindowTitle('Change Shortcode')
         self.user = user
         self.resize(100, 100)
         # frame box
@@ -139,6 +146,8 @@ class ChangeShortcode(QtWidgets.QWidget):
 
         if problem:
             mbox = QtWidgets.QMessageBox()
+            mbox.setWindowIcon(QtGui.QIcon(str(icon_path)))
+            mbox.setWindowTitle('whoops!')
             mbox.setText(mssage)
             mbox.setFont(self.font)
             mbox.setStyleSheet(self.sheetstyle)

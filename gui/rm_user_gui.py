@@ -4,11 +4,14 @@ on: 17/10/23
 """
 
 from PyQt6 import QtGui, QtWidgets, QtCore
+from path_support import icon_path
 class RmUser(QtWidgets.QWidget):
     submitClicked = QtCore.pyqtSignal(list)
 
     def __init__(self, user):
         super().__init__()
+        self.setWindowIcon(QtGui.QIcon(str(icon_path)))
+        self.setWindowTitle('Google Path support')
         # frame box
         self.user = user
         vert = QtWidgets.QVBoxLayout()
@@ -44,6 +47,8 @@ class ReAuthUser(QtWidgets.QWidget):
 
     def __init__(self, user, authenticated):
         super().__init__()
+        self.setWindowIcon(QtGui.QIcon(str(icon_path)))
+        self.setWindowTitle('Google Path support')
         # frame box
         self.user = user
         vert = QtWidgets.QVBoxLayout()
