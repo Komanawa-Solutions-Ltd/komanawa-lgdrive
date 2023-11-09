@@ -124,7 +124,18 @@ This directory holds:
     4. a text file with a list of shortcodes for each user/email address (~/google_mount_point/.config/.shortcodes)
     5. a text file that holds a list of the mounted drives (~/google_mount_point/.config/.mounted_drives) which is used for system startup
     6. a text file that holds the trayapp state (~/google_mount_point/.config/.trayapp_state) which is used for system startup
+    7. a text file to hold the google client ID and secret (~/google_mount_point/.config/.google_client).
 3. a mount dir for each mounted drive
+
+Google client ID and secret
+------------------------------
+
+When you use rclone with Google drive in its default configuration you are using rclone's client_id. This is shared between all the rclone users. There is a global rate limit on the number of queries per second that each client_id can do set by Google. rclone already has a high quota and I will continue to make sure it is high enough by contacting Google.
+
+It is strongly recommended to use your own client ID as the default rclone ID is heavily used. If you have multiple services running, it is recommended to use an API key for each service. The default Google quota is 10 transactions per second so it is recommended to stay under that number as if you use more than that, it will cause rclone to rate limit and make things slower.
+
+For information on how to create a client ID and secret see: https://rclone.org/drive/#making-your-own-client-id
+
 
 Definitions
 ------------------
@@ -167,6 +178,7 @@ There are some additional functionalities
     1. This will open a qt window that will allow you to set the rclone mount options for the drive
     2. There are currently only two default options that can be set this way: "default" and "light", these are defined in the applet code.  you are also welcome to set your own options by modifying the google_mount_point/.config/.mount_options file
     3. The applet will keep track of these options and use them when mounting the drive
+    4. You can set the google client ID and secret for the applet to use --> see Google client ID and secret for more information.
 2. There is "Drive path support" which launches a qt window that lets you:
     1. Get the google object ID from your file.
     2. Open the file's folder in google drive (launches your browser)

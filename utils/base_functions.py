@@ -6,7 +6,7 @@ import re
 import time
 import subprocess
 from path_support import google_mount_dir, google_cache_dir, base_configs, short_code_path, mount_options_path, \
-    master_config, mounted_drives_path
+    master_config, mounted_drives_path, google_client_path
 
 join_character = '@'
 bad_shortcode_char = (' ', '\t', '\n', '\r', '/', '\\', '?', '<', '>', '|', ':', '*', '"', "'", '=', join_character)
@@ -104,16 +104,23 @@ def create_config(email_address):
 
     # add all drives to config
     token = get_token(email_address)
+    google_client_id, google_client_secret = read_google_client()
     with open(config_path, 'w') as f:
         for drive_nm, drive_info in possible_drives.items():
             teamid = drive_info['id']
+            if teamid == '':
+                team_statement = f'team_drive ={teamid}\n'
+            else:
+                team_statement = f''
             out_text_team = (
                 '#start\n'
                 f"[{drive_nm}]\n"
                 'type = drive\n'
+                f'client_id = {google_client_id}\n'
+                f'client_secret = {google_client_secret}\n'
                 'scope = drive\n'
                 f'token = {token}\n'
-                f'team_drive ={teamid}\n'
+                f'{team_statement}'
                 'root_folder_id =\n'
                 '#end\n\n')
             f.write(out_text_team)
@@ -230,12 +237,12 @@ def mount_drive(drivenm, recreate_config=False):
     options = read_options()
     tmux_nm = get_tmuxnm_from_mnt_name(drivenm)
     raw_drive_name, shortcode = get_email_from_mountpoint_tmux_name(tmux_name=tmux_nm)
-    pos_drives = list_drives_available(shortcode=shortcode)
     config_path = get_rclone_config(short_code=shortcode, recreate_config=recreate_config)
-    assert drivenm in pos_drives, f'{drivenm} not in {pos_drives}'
     config_drives = list_drives_in_config(config_path)
     if drivenm not in config_drives:
         get_rclone_config(short_code=shortcode, recreate_config=True)
+        t = list_drives_in_config(config_path)
+        assert drivenm in t, f'{drivenm=} not in {config_path=}: avalible drives {t}'
 
     if is_mounted(drivenm):
         print(f'skipping {raw_drive_name} already mounted')
@@ -269,8 +276,8 @@ def mount_drive(drivenm, recreate_config=False):
 
 
 def prime_mount(tmux_name):
-    # todo basically prime start mount so that it's not super laggy when first flying
-    # todo lots of folks rc vfs/refresh recursive=true
+    # todo lots of folks rc vfs/refresh recursive=true, but I have not figured it out yet
+    # rclone rc vfs/refresh recursive=true 'dir=Media/'
     pass
 
 
@@ -297,7 +304,7 @@ def user_authenticated(email_address=None, shortcode=None):
         else:
             raise ValueError('must provide email_address or shortcode')
         return True
-    except AssertionError:
+    except AssertionError as val:
         return False
 
 
@@ -360,6 +367,7 @@ def write_shortcodes(short_codes):
             f.write(f'{k}={v}\n')
     short_code_path.chmod(33152)
 
+
 def list_drives_available(email_address=None, shortcode=None):
     """
     get possible drives that could be mounted for a given email address
@@ -391,7 +399,7 @@ def list_drives_available(email_address=None, shortcode=None):
         line = line.strip('[],')
         line = line.strip('\t')
         if line != '':
-            if line =='{':
+            if line == '{':
                 temp = {}
                 temp['shortcode'] = shortcode
             elif line == '}':
@@ -417,6 +425,7 @@ def write_options(options):
         for line in options:
             f.write(line + '\n')
     mount_options_path.chmod(33152)
+
 
 def read_options():
     with mount_options_path.open('r') as f:
@@ -455,7 +464,7 @@ def update_master_config(add_email=None, remove_email=None, local=True):
     if remove_email is not None:
         if remove_email in master:
             master.pop(remove_email)
-
+    google_client_id, google_client_secret = read_google_client()
     with master_config.open('w') as f:
         for email, data in master.items():
             # write records:
@@ -463,13 +472,15 @@ def update_master_config(add_email=None, remove_email=None, local=True):
                 '#start\n'
                 f"[{email}]\n"
                 f'type = {data["type"]}\n'
+                f'client_id = {data.get("client_id", google_client_id)}\n'
+                f'client_secret = {data.get("client_secret", google_client_secret)}\n'
                 f'scope = {data["scope"]}\n'
                 f'token = {data["token"]}\n'
-                f'team_drive = {data["team_drive"]}\n'
                 f'root_folder_id = {data["root_folder_id"]}\n'
                 '#end\n\n')
             f.write(out_text)
     master_config.chmod(33152)
+
 
 def read_master_config():
     """
@@ -483,6 +494,8 @@ def read_master_config():
         lines = f.readlines()
     lines = [e.strip('\n') for e in lines]
     lines = [e for e in lines if e != '']
+    if lines[-1] != '#end':
+        lines.append('#end')
     i = 0
     email = None
     temp = None
@@ -552,11 +565,13 @@ def update_mounted_drives(add_drive=None, remove_drive=None):
             f.write(line + '\n')
     mounted_drives_path.chmod(33152)
 
+
 def list_drives_in_config(config_path):
     with config_path.open('r') as f:
         lines = f.read()
     t = re.findall("\[([^]]+)\]", lines)
     return t
+
 
 def get_id_from_config(drive_name, config_path):
     with config_path.open('r') as f:
@@ -571,11 +586,28 @@ def get_id_from_config(drive_name, config_path):
                 return l.split('=')[1].strip()
     return ''
 
+
+def read_google_client():
+    if not google_client_path.exists():
+        return '', ''
+    with google_client_path.open('r') as f:
+        google_client_id = f.readline().strip()
+        google_client_secret = f.readline().strip()
+    return google_client_id, google_client_secret
+
+
+def write_google_client(google_client_id, google_client_secret):
+    if google_client_id is None or google_client_secret is None:
+        raise ValueError('must provide google_client_id and google_client_secret')
+    elif google_client_id.strip() == '' or google_client_secret.strip() == '':
+        raise ValueError('must provide google_client_id and google_client_secret')
+
+    with google_client_path.open('w') as f:
+        f.write(f'{google_client_id}\n')
+        f.write(f'{google_client_secret}\n')
+    google_client_path.chmod(33152)
+
+
 if __name__ == '__main__':
     email = 'matt@komanawa.com'
-    list_drives_in_config(get_rclone_config(email_address=email, recreate_config=False))
-    mt_drives = list_active_drive_mounts()
-    short_code = get_user_shortcode(email)
-    mt_drives = [e for e in mt_drives if short_code in e.split(join_character)[0]]
-    close_google_drive()
-    pass
+    print(user_authenticated(email_address=email))

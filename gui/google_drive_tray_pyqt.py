@@ -88,6 +88,7 @@ class GoogleDriveTrayApp:
                 self.lgdrive.add_user(user, shortcode)
             except Exception as val:
                 self._launch_error(f'error for add user:\n{val}')
+                self.sub_window_user.close()
 
         self.create_menu()
 
@@ -102,8 +103,12 @@ class GoogleDriveTrayApp:
 
     def authenticate_user(self, data):
         auth, user = data
-        if auth:
-            self.lgdrive.reauthenticate_user(user)
+        try:
+            if auth:
+                self.lgdrive.reauthenticate_user(user)
+        except Exception as val:
+            self._launch_error(f'error for re-auth user:\n{val}')
+            self.sub_window_auth.close()
         self.create_menu()
 
     def _set_rclone_options(self):
@@ -116,8 +121,21 @@ class GoogleDriveTrayApp:
             return
 
     def set_rclone_options(self, data):
-        remount, mnt_options = data
-        self.lgdrive.set_mount_options(mnt_options, remount)
+        (progresbar, proglab), remount, mnt_options = data
+        self.lgdrive.set_mount_options(mnt_options, remount=False)
+        if remount:
+            drives = self.lgdrive._get_mnt_drives(None)
+            i = 0
+            nactions = len(drives)
+            progresbar.show()
+            for d in drives:
+                t = f"Remounting drive: {d}"
+                print(t)
+                proglab.setText(t)
+                progresbar.setValue(int(i / nactions * 100))
+                self.lgdrive.unmount_drive(d)
+                self.lgdrive.mount_drive(d)
+                i += 1
 
     def _gpath_support(self):
         try:
@@ -146,27 +164,36 @@ class GoogleDriveTrayApp:
             self._launch_error(f'error for add/remove drives:\n{val}\ntry re-authenticating')
 
     def add_rm_drives(self, drives):
-        # todo kinda need a popup window that says remounting drives... or something as this takes a bit of time
-        user = drives[0]
-        if len(drives) > 1:
-            if drives[1] is None:
+        progresbar, proglab = drives[0]
+        user = drives[1]
+
+        if len(drives) > 2:
+            if drives[2] is None:
                 return
-            current_drives = self.lgdrive._get_mnt_drives(user)
-            for d in drives[1:]:
-                if d not in current_drives:
-                    print(f"Adding drive for {user}: {d}")
-                    self.lgdrive.mount_drive(d)
-                else:
-                    pass
-            for d in current_drives:
-                if d not in drives[1:]:
-                    print(f'Removing drive for {user}: {d}')
-                    self.lgdrive.unmount_drive(d)
+            drives = drives[2:]
         else:
-            print(f'removing all drives for: {user}')
-            rm_drives = self.lgdrive._get_mnt_drives(user)
-            for d in rm_drives:
-                self.lgdrive.unmount_drive(d)
+            drives = []
+
+        current_drives = self.lgdrive._get_mnt_drives(user)
+        add_drives = [d for d in drives if d not in current_drives]
+        rm_drives = [d for d in current_drives if d not in drives]
+        i = 0
+        nactions = len(add_drives) + len(rm_drives)
+        progresbar.show()
+        for d in add_drives:
+            t = f"Adding drive for {user}: {d}"
+            print(t)
+            proglab.setText(t)
+            progresbar.setValue(int(i / nactions * 100))
+            self.lgdrive.mount_drive(d)
+            i += 1
+        for d in rm_drives:
+            progresbar.setValue(int(i / nactions * 100))
+            t = f'Removing drive for {user}: {d}'
+            print(t)
+            proglab.setText(t)
+            self.lgdrive.unmount_drive(d)
+            i += 1
 
     def _remove_user_window(self, user):
         try:
@@ -274,8 +301,6 @@ def launch_panel_app():
     GDTA = GoogleDriveTrayApp(app)
     sys.exit(app.exec())
 
-
-# todo enable client id
 
 if __name__ == '__main__':
     launch_panel_app()

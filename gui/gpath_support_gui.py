@@ -2,8 +2,6 @@
 created matt_dumont 
 on: 9/11/23
 """
-from copy import deepcopy
-import sys
 from PyQt6 import QtGui, QtWidgets, QtCore
 from utils.util_functions import LGDrive
 from path_support import icon_path

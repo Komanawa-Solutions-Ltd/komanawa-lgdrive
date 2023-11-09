@@ -114,6 +114,15 @@ class AddRmDrives(QtWidgets.QWidget):
 
         self.update_buttons_status()
         self.connections()
+
+        self.progress_lab = lab = QtWidgets.QLabel('')
+        lab.setFont(self.font_bold)
+        lab.setStyleSheet(self.sheetstyle)
+        total_lay.addWidget(lab)
+        self.progress = QtWidgets.QProgressBar(self)
+        self.progress.setGeometry(200, 80, 250, 20)
+        self.progress.hide()
+        total_lay.addWidget(self.progress)
         return total_lay
 
     def search_item_active(self):
@@ -199,7 +208,7 @@ class AddRmDrives(QtWidgets.QWidget):
         self.close()
 
     def done(self):
-        self.submitClicked.emit([self.user] + self.get_get_active_elements())
+        self.submitClicked.emit([(self.progress, self.progress_lab), self.user] + self.get_get_active_elements())
         self.close()
 
 
