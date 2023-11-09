@@ -2,13 +2,20 @@
 created matt_dumont 
 on: 17/09/23
 """
+import re
 import time
 import subprocess
 from path_support import google_mount_dir, google_cache_dir, base_configs, short_code_path, mount_options_path, \
-    master_config
+    master_config, mounted_drives_path
 
-join_character = '~'
+join_character = '@'
+bad_shortcode_char = (' ', '\t', '\n', '\r', '/', '\\', '?', '<', '>', '|', ':', '*', '"', "'", '=', join_character)
 base_tmux_name = f'*gd{join_character}' + '{}' + join_character + '{}'
+
+ava_mount_options = (
+    'default',
+    'light',
+)
 
 light_mount_option = (
     '--drive-export-formats link.html',  # manage drive formats so google docs download as .html links
@@ -39,8 +46,7 @@ base_mount_options = (
 
 
 def get_prebuilt_mount_options(key):
-    poss_keys = ('light', 'default')
-    assert key in poss_keys, f'{key=} must be one of {poss_keys}'
+    assert key in ava_mount_options, f'{key=} must be one of {ava_mount_options}'
     if key == 'light':
         return light_mount_option
     elif key == 'default':
@@ -62,28 +68,60 @@ def close_google_drive():
     return True
 
 
-def get_rclone_config(email_address=None, short_code=None):
+def _get_config_path(email_address=None, short_code=None):
     if email_address is None and short_code is None:
         raise ValueError('must provide email_address or short_code')
     elif email_address is not None and short_code is not None:
         raise ValueError('must provide email_address or short_code, not both')
     if short_code is None:
         short_code = get_user_shortcode(email_address)
-
+    if email_address is None:
+        email_address = get_user_from_shortcode(short_code)
     config_name = f'.{short_code}.rclone.conf'
     config_path = base_configs.joinpath(config_name)
     return config_path
 
 
-def create_config(email_address):  # todo call in mount_drive
-    # todo add all drives to config
+def get_rclone_config(email_address=None, short_code=None, recreate_config=False):
+    config_path = _get_config_path(email_address, short_code)
+    if email_address is None:
+        email_address = get_user_from_shortcode(short_code)
+    assert email_address is not None
+    if recreate_config:
+        create_config(email_address)
+    return config_path
 
-    # return success, message
-    raise NotImplementedError
+
+def create_config(email_address):
+    """
+    create a config file for a given email address
+    :param email_address:
+    :return:
+    """
+    possible_drives = list_drives_available(email_address)
+    assert len(possible_drives) > 0, f'no drives available for {email_address}'
+    config_path = _get_config_path(email_address=email_address)
+
+    # add all drives to config
+    token = get_token(email_address)
+    with open(config_path, 'w') as f:
+        for drive_nm, drive_info in possible_drives.items():
+            teamid = drive_info['id']
+            out_text_team = (
+                '#start\n'
+                f"[{drive_nm}]\n"
+                'type = drive\n'
+                'scope = drive\n'
+                f'token = {token}\n'
+                f'team_drive ={teamid}\n'
+                'root_folder_id =\n'
+                '#end\n\n')
+            f.write(out_text_team)
+    config_path.chmod(600)
 
 
 def get_auth_code(email_address, local=True):
-    code = 'rclone authorize "google cloud storage"'
+    code = 'rclone authorize "drive"'
     if local:
         output = subprocess.run(code, capture_output=True, shell=True)
         assert output.returncode == 0, f'failed to authenticate {email_address}'
@@ -103,8 +141,8 @@ def get_auth_code(email_address, local=True):
                 print_output = False
             if print_output:
                 print(t)
+            output = '\n'.join(output)
 
-    output = '\n'.join(output)
     output = output[output.find('{'):output.find('}') + 1]
     return output
 
@@ -117,11 +155,10 @@ def is_mounted(nm):
     """
     mounted = False
     time.sleep(1)
-    shortcode, raw_drive_name = get_email_from_mountpoint_tmux_name(mp_name=nm)
+    raw_drive_name, shortcode = get_email_from_mountpoint_tmux_name(mp_name=nm)
     # check if tmux session exists
     tmux_nm, mp_name = get_mountpoint_tmux_name(raw_drive_name, shortcode=shortcode)
     assert mp_name == nm, f'{mp_name=} != {nm=}'
-    tmux_nm = base_tmux_name.format(nm)  # these are listed in alphabetical order
     tmuxdirs = subprocess.run('tmux ls', capture_output=True, shell=True).stdout.decode()
     tmuxdirs = tmuxdirs.split('\n')
     tmuxdirs = [e.split(':')[0] for e in tmuxdirs]
@@ -139,7 +176,7 @@ def is_mounted(nm):
 
 
 def get_mnt_name_from_tmux_name(tmux_name):
-    return tmux_name.split(join_character)[1]
+    return join_character.join(tmux_name.split(join_character)[1:])
 
 
 def get_tmuxnm_from_mnt_name(mnt_name):
@@ -148,6 +185,7 @@ def get_tmuxnm_from_mnt_name(mnt_name):
 
 
 def get_mountpoint_tmux_name(raw_drive_name, shortcode=None, email_address=None):
+    raw_drive_name = raw_drive_name.replace(' ', '_')
     if shortcode is None and email_address is None:
         raise ValueError('must provide shortcode or email_address')
 
@@ -182,20 +220,24 @@ def get_email_from_mountpoint_tmux_name(tmux_name=None, mp_name=None, return_ema
         return drive_name, shortcode
 
 
-def mount_drive(drivenm):
+def mount_drive(drivenm, recreate_config=False):
     """
     mount a google drive in a tmux session
     :param drivenm: drive name (shortcode + drive name)
+    :param recreate_config: bool if true recreate config file
     :return:
     """
     options = read_options()
     tmux_nm = get_tmuxnm_from_mnt_name(drivenm)
-    shortcode, raw_drive_name = get_email_from_mountpoint_tmux_name(tmux_name=tmux_nm)
-    config_path = get_rclone_config(short_code=shortcode)
+    raw_drive_name, shortcode = get_email_from_mountpoint_tmux_name(tmux_name=tmux_nm)
     pos_drives = list_drives_available(shortcode=shortcode)
+    config_path = get_rclone_config(short_code=shortcode, recreate_config=recreate_config)
     assert drivenm in pos_drives, f'{drivenm} not in {pos_drives}'
+    config_drives = list_drives_in_config(config_path)
+    if drivenm not in config_drives:
+        get_rclone_config(short_code=shortcode, recreate_config=True)
 
-    if is_mounted(raw_drive_name):
+    if is_mounted(drivenm):
         print(f'skipping {raw_drive_name} already mounted')
     else:
         mount_dir = google_mount_dir.joinpath(drivenm)
@@ -208,17 +250,20 @@ def mount_drive(drivenm):
         # create tmux session for the mount then mount the drive.
         code = ' '.join([
             f"tmux new -s {tmux_nm} -d",  # run in tmux
+            f'rclone -v',
             f'--config {config_path}',  # email specific config file
             f'--cache-dir {cache}',  # cache dir
             *options,  # mount options
-            f'mount {raw_drive_name}:  {mount_dir}'])
+            f'mount {drivenm}:  {mount_dir}'])
         subprocess.run(code, shell=True)
         success = True
         error = ''
-        if not is_mounted(raw_drive_name):
+        if not is_mounted(drivenm):
             success = False
-            error = f'mount failed for {raw_drive_name}'
-        # todo need to write to mounted drives file
+            error = f'mount failed for {drivenm}'
+        # write to mounted drives file
+        if success:
+            update_mounted_drives(add_drive=drivenm)
         prime_mount(tmux_nm)
         return success, error
 
@@ -226,7 +271,7 @@ def mount_drive(drivenm):
 def prime_mount(tmux_name):
     # todo basically prime start mount so that it's not super laggy when first flying
     # todo lots of folks rc vfs/refresh recursive=true
-    raise NotImplementedError
+    pass
 
 
 def list_active_drive_mounts():
@@ -236,7 +281,7 @@ def list_active_drive_mounts():
     """
     tmuxdirs = subprocess.run('tmux ls', capture_output=True, shell=True).stdout.decode()
     tmuxdirs = tmuxdirs.split('\n')
-    tmuxdirs = [e.split(':')[0] for e in tmuxdirs]  # todo exclude other tmux paths
+    tmuxdirs = [e.split(':')[0] for e in tmuxdirs]
     base_name = base_tmux_name.split('{')[0]
     tmuxdirs = [e for e in tmuxdirs if base_name == e[:len(base_name)]]
     mnt_names = [get_mnt_name_from_tmux_name(e) for e in tmuxdirs]
@@ -260,17 +305,18 @@ def get_user_shortcode(email_address):
     return read_shortcodes()[email_address]
 
 
-def check_shortcode(shortcode, short_codes):
+def check_shortcode(shortcode, short_codes=None):
+    if short_codes is None:
+        short_codes = read_shortcodes()
     inv = {v: k for k, v in short_codes.items()}
-    bad_chars = [' ', '\t', '\n', '\r', '/', '\\', '?', '<', '>', '|', ':', '*', '"', "'", '=', join_character]
     success = True
     mssage = ''
     if shortcode in short_codes.values():
         success = False
         mssage = f'{shortcode} already in use for {inv[shortcode]}'
-    elif any([e in shortcode for e in bad_chars]):
+    elif any([e in shortcode for e in bad_shortcode_char]):
         success = False
-        mssage = f'bad characters in {shortcode}, cannot use {bad_chars}'
+        mssage = f'bad characters in {shortcode}, cannot use {bad_shortcode_char}'
     elif shortcode[0] == '-':
         success = False
         mssage = f'cannot start with "-"'
@@ -302,6 +348,7 @@ def read_shortcodes():
         lines = f.readlines()
     out = {}
     for line in lines:
+        line = line.strip('\n')
         line = line.split('=')
         out[line[0]] = line[1]
     return out
@@ -311,7 +358,7 @@ def write_shortcodes(short_codes):
     with short_code_path.open('w') as f:
         for k, v in short_codes.items():
             f.write(f'{k}={v}\n')
-
+    short_code_path.chmod(600)
 
 def list_drives_available(email_address=None, shortcode=None):
     """
@@ -320,32 +367,48 @@ def list_drives_available(email_address=None, shortcode=None):
     :return: dict of drive names and info
     {drivename(inc short code): {id:###, kind:###, name:###(w/o shortcode), shortcode:###}}
     """
-    if shortcode is None and email_address is None:
+    if shortcode is None:
+        assert email_address is not None
         shortcode = get_user_shortcode(email_address)
+    if email_address is None:
+        assert shortcode is not None
+        email_address = get_user_from_shortcode(shortcode)
+    assert email_address is not None, 'must provide shortcode or email_address'
     assert shortcode is not None, 'must provide shortcode or email_address'
 
     code = ' '.join(['rclone',
                      'backend',
                      'drives',
                      '--config', str(master_config),
-                     f'{shortcode}:' # todo probably better if this is the emailaddress
+                     f'{email_address}:'
                      ])
     output = subprocess.run(code, capture_output=True, shell=True)
-    assert output.returncode == 0, f'failed to list google drives for {email_address}'
+    assert output.returncode == 0, f'failed to list google drives for {email_address}: {output.stderr.decode()}'
     out = output.stdout.decode()
     outdata = {}
-    for line in out.split('\n'):
+    for i, line in enumerate(out.split('\n')):
+        line = line.strip()
+        line = line.strip('[],')
+        line = line.strip('\t')
         if line != '':
-            line = line.strip()
-            line = line.strip(',{}')
-            temp = {}
-            for e in line.split(','):
-                k = e.split(':')[0].strip('"')
-                v = e.split(':')[1].strip('"')
+            if line =='{':
+                temp = {}
+                temp['shortcode'] = shortcode
+            elif line == '}':
+                outkey = get_mountpoint_tmux_name(temp['name'], shortcode=shortcode)[1]
+                outdata[outkey] = temp
+            else:
+                line = line.strip(',{}')
+                k = line.split(':')[0].strip(' "')
+                v = line.split(':')[1].strip(' "')
                 temp[k] = v
-            temp['shortcode'] = shortcode
-            outkey = get_mountpoint_tmux_name(temp['name'], shortcode=shortcode)[1]
-            outdata[outkey] = temp
+    # manually add in mydrive
+    outdata[get_mountpoint_tmux_name('mydrive', shortcode=shortcode)[1]] = {
+        'shortcode': shortcode,
+        "id": "",
+        "kind": "drive#drive",
+        "name": 'mydrive'
+    }
     return outdata
 
 
@@ -353,7 +416,7 @@ def write_options(options):
     with mount_options_path.open('w') as f:
         for line in options:
             f.write(line + '\n')
-
+    mount_options_path.chmod(600)
 
 def read_options():
     with mount_options_path.open('r') as f:
@@ -369,17 +432,81 @@ def get_drive_export_format():
             return line.split(' ')[1]
 
 
-def update_master_config(add_email, remove_email):  # todo
+def update_master_config(add_email=None, remove_email=None, local=True):
     """
     update the master config file to include add_email and remove remove_email
-    :param add_email:
-    :param remove_email:
+    :param add_email: None or email to add or re-authenticate
+    :param remove_email: None or email to remove
+    :param local: bool if true use local auth, else use browser auth
     :return:
     """
-    # todo note that add email will also be used to re-authenticate
-    # todo authenticate here
-    # # todo master config name = shortcode or username, or something else, propogate decision through
-    raise NotImplementedError
+    master = read_master_config()
+    if add_email is not None:
+        if add_email in master:  # re-authenticate
+            master[add_email]['token'] = get_auth_code(add_email, local=local)
+        else:
+            temp = {'type': 'drive',
+                    'scope': 'drive',
+                    'token': get_auth_code(add_email, local=local),
+                    'team_drive': '',
+                    'root_folder_id': ''
+                    }
+            master[add_email] = temp
+    if remove_email is not None:
+        if remove_email in master:
+            master.pop(remove_email)
+
+    with master_config.open('w') as f:
+        for email, data in master.items():
+            # write records:
+            out_text = (
+                '#start\n'
+                f"[{email}]\n"
+                f'type = {data["type"]}\n'
+                f'scope = {data["scope"]}\n'
+                f'token = {data["token"]}\n'
+                f'team_drive = {data["team_drive"]}\n'
+                f'root_folder_id = {data["root_folder_id"]}\n'
+                '#end\n\n')
+            f.write(out_text)
+    master_config.chmod(600)
+
+def read_master_config():
+    """
+    read the master config file
+    :return:
+    """
+    out = {}
+    if not master_config.exists():
+        return out
+    with master_config.open('r') as f:
+        lines = f.readlines()
+    lines = [e.strip('\n') for e in lines]
+    lines = [e for e in lines if e != '']
+    i = 0
+    email = None
+    temp = None
+    for line in lines:
+        if line == '#start':
+            i += 1
+            temp = {}
+        elif line == '#end':
+            out[f'{email}'] = temp
+            i = 0
+        elif i == 1:
+            email = line.strip('[]')
+            i += 1
+        else:
+            line = line.split('=')
+            temp[line[0].strip()] = line[1].strip()
+            i += 1
+    return out
+
+
+def get_token(email_address):
+    master_config_data = read_master_config()
+    assert email_address in master_config_data, f'{email_address} not in {master_config_data}'
+    return master_config_data[email_address]['token']
 
 
 def list_users():
@@ -391,5 +518,64 @@ def unmount_drive(nm, rm_from_drive_list=True):
     code = f"umount {mount_dir}"
     output = subprocess.run(code, shell=True)
     if rm_from_drive_list:
-        raise NotImplementedError # todo remove drive name from list
+        update_mounted_drives(remove_drive=nm)
     return output.returncode == 0
+
+
+def read_mounted_drives():
+    """
+    read the list of mounted drives
+    :return:
+    """
+    if not mounted_drives_path.exists():
+        return []
+    with mounted_drives_path.open('r') as f:
+        lines = f.readlines()
+    lines = [e.strip('\n') for e in lines]
+    return list(set(lines))
+
+
+def update_mounted_drives(add_drive=None, remove_drive=None):
+    """
+    update the list of mounted drives
+    :return:
+    """
+    mnt_dirs = read_mounted_drives()
+    if add_drive is not None:
+        mnt_dirs.append(add_drive)
+    if remove_drive is not None:
+        if remove_drive in mnt_dirs:
+            mnt_dirs.remove(remove_drive)
+    mnt_dirs = list(set(mnt_dirs))
+    with mounted_drives_path.open('w') as f:
+        for line in mnt_dirs:
+            f.write(line + '\n')
+    mounted_drives_path.chmod(600)
+
+def list_drives_in_config(config_path):
+    with config_path.open('r') as f:
+        lines = f.read()
+    t = re.findall("\[([^]]+)\]", lines)
+    return t
+
+def get_id_from_config(drive_name, config_path):
+    with config_path.open('r') as f:
+        lines = f.readlines()
+    look_for_id = False
+    for l in lines:
+        if drive_name in l:
+            look_for_id = True
+            continue
+        if look_for_id:
+            if 'team_drive' in l:
+                return l.split('=')[1].strip()
+    return ''
+
+if __name__ == '__main__':
+    email = 'matt@komanawa.com'
+    list_drives_in_config(get_rclone_config(email_address=email, recreate_config=False))
+    mt_drives = list_active_drive_mounts()
+    short_code = get_user_shortcode(email)
+    mt_drives = [e for e in mt_drives if short_code in e.split(join_character)[0]]
+    close_google_drive()
+    pass

@@ -39,6 +39,46 @@ class RmUser(QtWidgets.QWidget):
         self.submitClicked.emit([False, self.user])
         self.close()
 
+class ReAuthUser(QtWidgets.QWidget):
+    submitClicked = QtCore.pyqtSignal(list)
+
+    def __init__(self, user, authenticated):
+        super().__init__()
+        # frame box
+        self.user = user
+        vert = QtWidgets.QVBoxLayout()
+        if authenticated:
+            lab = QtWidgets.QLabel(f'Are you sure you want to re-authenticate\n{user}?')
+        else:
+            lab = QtWidgets.QLabel(f'Are you sure you want to authenticate\n{user}?')
+        self.font = QtGui.QFont()
+        self.font.setBold(True)
+        self.sheetstyle = f"color: black; "
+        lab.setFont(self.font)
+        lab.setStyleSheet(self.sheetstyle)
+
+        vert.addWidget(lab)
+        # save/cancel buttons
+        save = QtWidgets.QPushButton(f'Authenticate {user}')
+        save.clicked.connect(self.aut_user)
+        cancel = QtWidgets.QPushButton('Cancel')
+        cancel.clicked.connect(self.quit)
+        horiz = QtWidgets.QHBoxLayout()
+        horiz.addWidget(save)
+        horiz.addWidget(cancel)
+        vert.addLayout(horiz)
+        self.setLayout(vert)
+        self.show()
+    def aut_user(self):
+        self.submitClicked.emit([True, self.user])
+        self.close()
+
+    def quit(self):
+        self.submitClicked.emit([False, self.user])
+        self.close()
+
+
+
 if __name__ == '__main__':
     import sys
     app = QtWidgets.QApplication(sys.argv)

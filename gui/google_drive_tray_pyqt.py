@@ -8,45 +8,36 @@ from pathlib import Path
 from threading import Event
 
 sys.path.append(Path(__file__).parents[1])
-from path_support import icon_path, tray_app_state_path
-from gui.add_user_gui import AddUser
+from path_support import icon_path
+from gui.add_user_gui import AddUser, ChangeShortcode
 from gui.add_remove_drives import AddRmDrives
-from gui.rm_user_gui import RmUser
+from gui.rm_user_gui import RmUser, ReAuthUser
+from utils.util_functions import LGDrive
+from gui.gpath_support_gui import Gpath
+from gui.setrclone_options import SetMntOptions
 
-# todo GUI is good enough for now, next step is the functionality.
-# todo add shortcodes info
-# todo rclone mount options
 
 class GoogleDriveTrayApp:
     menu_keys = (
+        'gpath_support',
+        'set_rclone_options',
         'add_user',
         'quit',
     )
     menu_text = {
+        'gpath_support': 'Drive Path Support',
+        'set_rclone_options': 'Set Rclone Options',
         'add_user': 'Add User',
         'quit': 'Quit',
     }
 
-    def __init__(self, app):
-        tray_app_state_path.unlink(True)  # todo DADB
-        if tray_app_state_path.exists():
-            with open(tray_app_state_path, 'r') as f:
-                pass  # todo read state
-            self.users = []  # todo set
-            self.user_drives = {}  # todo set
-            self.users_authenticated = {u: self.test_user_auth(u) for u in self.users}
-            raise NotImplementedError
-        else:
-            self.user_drives = {
-                'test@test.com': []  # todo DADB
-            }
-            self.users = [
-                'test@test.com'  # todo DADB
-            ]
-            self.users_authenticated = {
-                'test@test.com': True  # todo DADB
-            }
-
+    def __init__(self, app, gpath_support=Gpath):
+        assert isinstance(gpath_support, Gpath) or issubclass(gpath_support, Gpath)
+        self.font = QtGui.QFont()
+        self.sheetstyle = f"color: black; "
+        self.gpath_support_gui = gpath_support
+        self.lgdrive = LGDrive()
+        self.lgdrive.start_google_drive()
         self.event = Event()
         self.app = app
         self.tray = QtWidgets.QSystemTrayIcon()
@@ -60,13 +51,15 @@ class GoogleDriveTrayApp:
         self.menu_items = {}
 
         menu_actions = {
+            'gpath_support': self._gpath_support,
+            'set_rclone_options': self._set_rclone_options,
             'add_user': self._add_user_window,
             'quit': self.close,
         }
 
         self.menu = QtWidgets.QMenu()
 
-        for u in self.users:
+        for u in LGDrive._get_users():
             self.menu_items[u] = t = UserMenu(u, self)
             self.menu.addMenu(t)
 
@@ -79,104 +72,176 @@ class GoogleDriveTrayApp:
         self.tray.setContextMenu(self.menu)
 
     def _add_user_window(self):
-        self.sub_window_user = AddUser(self.users)
-        self.sub_window_user.submitClicked.connect(self.add_user)
-        self.sub_window_user.show()
+        try:
+            self.sub_window_user = AddUser(self.lgdrive._get_users())
+            self.sub_window_user.submitClicked.connect(self.add_user)
+            self.sub_window_user.show()
+        except Exception as val:
+            self._launch_error(f'error for add user:\n{val}')
+            return
 
-    def add_user(self, user):
+    def add_user(self, data):
+        add, user, shortcode = data
         print(f"Adding user: {user}")
-        self.user_drives[user] = []
-        self.users.append(user)
-        self.users_authenticated[user] = False
-        # todo enable when ready self._auth_user_window(user)
+        if add:
+            try:
+                self.lgdrive.add_user(user, shortcode)
+            except Exception as val:
+                self._launch_error(f'error for add user:\n{val}')
+
         self.create_menu()
 
-    def _auth_user_window(self, user):  # todo
-        # todo then authenticate
-        raise NotImplementedError
+    def _auth_user_window(self, user):
+        try:
+            self.sub_window_auth = ReAuthUser(user, self.lgdrive._user_authenticated(user))
+            self.sub_window_auth.submitClicked.connect(self.authenticate_user)
+            self.sub_window_auth.show()
+        except Exception as val:
+            self._launch_error(f'error for re-auth user:\n{val}')
+            return
 
-    def authenticate_user(self):
-        # todo authenticate user... how to do this?
+    def authenticate_user(self, data):
+        auth, user = data
+        if auth:
+            self.lgdrive.reauthenticate_user(user)
         self.create_menu()
+
+    def _set_rclone_options(self):
+        try:
+            self.sub_window_mnt = SetMntOptions()
+            self.sub_window_mnt.submitClicked.connect(self.set_rclone_options)
+            self.sub_window_mnt.show()
+        except Exception as val:
+            self._launch_error(f'error for set rclone options:\n{val}')
+            return
+
+    def set_rclone_options(self, data):
+        remount, mnt_options = data
+        self.lgdrive.set_mount_options(mnt_options, remount)
+
+    def _gpath_support(self):
+        try:
+            self.sub_window_gdrive = self.gpath_support_gui()
+        except Exception as val:
+            self._launch_error(f'error for gpath support:\n{val}')
+            return
+
+        def temp(*args):
+            self.sub_window_gdrive.close()
+
+        self.sub_window_gdrive.submitClicked.connect(temp)
+        self.sub_window_gdrive.show()
 
     def _add_remove_drive_window(self, user):
 
-        self.drive_sub = AddRmDrives(user=user,
-                                     current_drives=self.user_drives[user],
-                                     available_drives=self.list_user_drives(user))
-        self.drive_sub.submitClicked.connect(self.add_rm_drives)
-        self.drive_sub.show()
+        try:
+            aval_drives = self.lgdrive._get_possible_drives(user)
+            curr_drives = self.lgdrive._get_mnt_drives(user)
+            aval_drives = [d for d in aval_drives if d not in curr_drives]
+            self.drive_sub = AddRmDrives(user=user, current_drives=curr_drives,
+                                         available_drives=aval_drives)
+            self.drive_sub.submitClicked.connect(self.add_rm_drives)
+            self.drive_sub.show()
+        except Exception as val:
+            self._launch_error(f'error for add/remove drives:\n{val}\ntry re-authenticating')
 
     def add_rm_drives(self, drives):
+        # todo kinda need a popup window that says remounting drives... or something as this takes a bit of time
         user = drives[0]
         if len(drives) > 1:
             if drives[1] is None:
                 return
-
-            print(f"Adding drives for {user}: {drives[1:]}")
-            # todo do stuff
-
+            current_drives = self.lgdrive._get_mnt_drives(user)
+            for d in drives[1:]:
+                if d not in current_drives:
+                    print(f"Adding drive for {user}: {d}")
+                    self.lgdrive.mount_drive(d)
+                else:
+                    pass
+            for d in current_drives:
+                if d not in drives[1:]:
+                    print(f'Removing drive for {user}: {d}')
+                    self.lgdrive.unmount_drive(d)
         else:
             print(f'removing all drives for: {user}')
-            # todo do stuff
+            rm_drives = self.lgdrive._get_mnt_drives(user)
+            for d in rm_drives:
+                self.lgdrive.unmount_drive(d)
 
     def _remove_user_window(self, user):
-        print(f"Removing user: {user}")
-        self.sub_window_rmuser = RmUser(user)
-        self.sub_window_rmuser.submitClicked.connect(self.rm_user)
-        self.sub_window_rmuser.show()
+        try:
+            print(f"Removing user: {user}")
+            self.sub_window_rmuser = RmUser(user)
+            self.sub_window_rmuser.submitClicked.connect(self.rm_user)
+            self.sub_window_rmuser.show()
+        except Exception as val:
+            self._launch_error(f'error for remove user:\n{val}')
+            return
 
     def rm_user(self, data):
         rm, user = data
         if rm:
-            # todo remove user from rclone etc.
             print(f"Removing user: {user}")
-            self.users.remove(user)
-            self.user_drives.pop(user)
-            self.users_authenticated.pop(user)
+            self.lgdrive.rm_user(user)
             self.create_menu()
             pass
         else:
             pass  # cancelled
 
-    def list_user_drives(self, user):  # todo user rclone
-        # todo look at: https://forum.rclone.org/t/google-drive-list-shared-drives/22955
-        # todo remove current drives for the user
-        out = [f'test{i}' for i in range(10)]  # todo dadb
-        return out
+    def _change_shortcode(self, user):
+        try:
+            print(f"changing shortcode for user: {user}")
+            self.sub_window_chcode = ChangeShortcode(user, self.lgdrive._get_shortcode(user))
+            self.sub_window_chcode.submitClicked.connect(self.change_shortcode)
+            self.sub_window_chcode.show()
+        except Exception as val:
+            self._launch_error(f'error for change shortcode:\n{val}')
+            return
 
-    def test_user_auth(self, user):  # todo
-        raise NotImplementedError
+    def change_shortcode(self, data):
+        change, user, newcode = data
+        if change:
+            self.lgdrive.change_shortcode(user, newcode)
+
+    def list_user_drives(self, user):
+        return self.lgdrive._get_possible_drives(user)
+
+    def _launch_error(self, message):
+        mbox = QtWidgets.QMessageBox()
+        mbox.setText(message)
+        mbox.setFont(self.font)
+        mbox.setStyleSheet(self.sheetstyle)
+        mbox.exec()
+        return
 
     def close(self):
-
-        # todo handle unmounting drives
-        # todo handle saving state
-        with open(tray_app_state_path, 'w') as f:
-            pass  # todo read/write state
+        print('closing')
+        self.lgdrive.stop_google_drive()
         self.event.set()
         self.app.quit()
-        pass
 
 
-class UserMenu(QtWidgets.QMenu):  # todo add color for authenicated or not, transmitting??? mouseover???
+class UserMenu(QtWidgets.QMenu):
     def __init__(self, user, parent):
         assert isinstance(parent, GoogleDriveTrayApp)
 
         super().__init__()
         self.user = user
         self.menu_text = {
-            'auth_user': f'Authenticate {user}',
+            'auth_user': f'Re-Authenticate {user}',
             'add_remove_drive': f'Add / Remove Drive(s) for {user}',
             'remove_user': f'Remove {user}',
         }
 
         self.setTitle(self.user)
         self.parent = parent
+        sc = self.parent.lgdrive._get_shortcode(self.user)
         self.menu_actions = {
             'auth_user': self.auth_user,
+            f'change shortcode ({sc})': self.change_shortcode,
             'add_remove_drive': self.add_remove_drive,
             'remove_user': self.remove_user,
+
         }
         self._create_menu()
 
@@ -185,13 +250,14 @@ class UserMenu(QtWidgets.QMenu):  # todo add color for authenicated or not, tran
         for k in self.menu_text.keys():
             t = QtGui.QAction(self.menu_text[k])
             t.triggered.connect(self.menu_actions[k])
-            if k == 'auth_user':
-                t.setEnabled(not self.parent.users_authenticated[self.user])
             self.menu_items[k] = t
             self.addAction(t)
 
     def auth_user(self):
         self.parent._auth_user_window(self.user)
+
+    def change_shortcode(self):
+        self.parent._change_shortcode(self.user)
 
     def remove_user(self):
         self.parent._remove_user_window(self.user)

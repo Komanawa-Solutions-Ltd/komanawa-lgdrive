@@ -2,17 +2,19 @@
 created matt_dumont 
 on: 17/09/23
 """
+import traceback
 from pathlib import Path
 import subprocess
 import webbrowser
 from path_support import google_mount_dir, mount_options_path
-from base_functions import join_character, get_rclone_config, get_drive_export_format, add_user_set_shortcode, \
+from utils.base_functions import join_character, get_rclone_config, get_drive_export_format, add_user_set_shortcode, \
     update_master_config, create_config, get_user_shortcode, read_shortcodes, write_shortcodes, check_shortcode, \
     user_authenticated, list_users, get_prebuilt_mount_options, get_user_from_shortcode, list_active_drive_mounts, \
-    list_drives_available, unmount_drive, close_google_drive, mount_drive, get_email_from_mountpoint_tmux_name
+    list_drives_available, unmount_drive, close_google_drive, mount_drive, get_email_from_mountpoint_tmux_name, \
+    read_mounted_drives, _get_config_path, get_id_from_config
 
 
-class lgdrive():
+class LGDrive():
     def __init__(self):
         pass
 
@@ -32,7 +34,7 @@ class lgdrive():
         close_google_drive()
 
     @staticmethod
-    def add_user(user, short_code):
+    def add_user(user, short_code, local=True):
         """
         add the user and shortcode, update the master config, then create the config
         :param user:
@@ -41,9 +43,8 @@ class lgdrive():
         """
         success, mssage = add_user_set_shortcode(user, short_code)
         assert success, mssage
-        update_master_config(add_email=user, remove_email=None)
-        success, message = create_config(user)
-        assert success, message
+        update_master_config(add_email=user, remove_email=None, local=local)
+        create_config(user)
 
     @staticmethod
     def recreate_all_configs():
@@ -51,12 +52,18 @@ class lgdrive():
         recreate all configs, re-run to get all drives and at start of each session
         :return:
         """
-        users = read_shortcodes().keys()
+        users = list_users()
         all_success = True
         errors = {}
         for user in users:
-            success, message = create_config(user)
-            if not success:
+            print(f'creating configs for {user}')
+            if not user_authenticated(user):
+                continue
+            try:
+                create_config(user)
+            except Exception:
+                success = False
+                message = traceback.format_exc()
                 all_success = False
                 errors[user] = message
         assert all_success, ('errors in creating configs:\n' + ' * '
@@ -69,7 +76,7 @@ class lgdrive():
         :param user:
         :return:
         """
-        get_rclone_config(user=user).unlink(missing_ok=True)
+        _get_config_path(email_address=user).unlink(missing_ok=True)
         update_master_config(add_email=None, remove_email=user)
         shortcodes = read_shortcodes()
         ushort_code = shortcodes.pop(user)
@@ -113,7 +120,27 @@ class lgdrive():
                              f'instead.\nError: {mssage}')
 
     @staticmethod
-    def reauthenticate_user(user):
+    def _get_shortcode(user):
+        """
+        get the shortcode for a given user
+        :param user: email address
+        :return:
+        """
+        return get_user_shortcode(user)
+
+    @staticmethod
+    def _user_authenticated(user):
+        """
+        check if a user is authenticated
+        :param user:
+        :return:
+        """
+        users = list_users()
+        assert user in users, f'{user} not in {users}'
+        return user_authenticated(user)
+
+    @staticmethod
+    def reauthenticate_user(user, local=True):
         """
         re authenicate an existing user
         :param user:
@@ -124,9 +151,8 @@ class lgdrive():
         if user_authenticated(user):
             pass
         else:
-            update_master_config(add_email=user, remove_email=None)
-            success, message = create_config(user)
-            assert success, message
+            update_master_config(add_email=user, remove_email=None, local=local)
+        create_config(user)
 
     def set_mount_options(self, option_name, remount=False):
         """
@@ -136,11 +162,16 @@ class lgdrive():
         :return:
         """
         t = get_prebuilt_mount_options(option_name)
-        mount_options_path.write_text(t)
+        mount_options_path.write_text('\n'.join(t))
         print(f'mount options set to {option_name}')
         if remount:
             self.stop_google_drive()
             self.start_google_drive()
+
+    @staticmethod
+    def _get_users():
+        users = list_users()
+        return users
 
     @staticmethod
     def ls_users(detailed=False):
@@ -166,6 +197,17 @@ class lgdrive():
         print(f'users:\n * {out}')
 
     @staticmethod
+    def _get_possible_drives(user):
+        """
+        list all possible drives for a given user
+        :return:
+        """
+        users = list_users()
+        assert user in users, f'{user} not in {users}'
+        drives = list_drives_available(user)
+        return drives
+
+    @staticmethod
     def ls_pos_drives(user=None, short_code=None):
         """
         list all possible drives for a given user
@@ -188,7 +230,15 @@ class lgdrive():
         mt_drives = list_active_drive_mounts()
         print(f'mounted drives:\n * ' + '\n * '.join(mt_drives))
 
-    def mount_drive(self, drivenm):
+    @staticmethod
+    def _get_mnt_drives(user):
+        mt_drives = list_active_drive_mounts()
+        short_code = get_user_shortcode(user)
+        mt_drives = [e for e in mt_drives if short_code in e.split(join_character)[0]]
+        return mt_drives
+
+    @staticmethod
+    def mount_drive(drivenm):
         """
         mount a drive
         :param drivenm:
@@ -213,10 +263,17 @@ class lgdrive():
         path = Path(path)
         path = path.relative_to(google_mount_dir)
         mount_name = path.parts[0]
+        rclone_config = get_rclone_config(short_code=mount_name.split(join_character)[0], recreate_config=False)
+        if str(path) == mount_name:
+            t = get_id_from_config(mount_name, rclone_config)
+            if t == '':
+                raise ValueError(f'failed to get google id for {path}')
+            return t
         path = path.relative_to(mount_name)
         parent_path = path.parent
+        if str(parent_path) == '.':
+            parent_path = ''
         file_name = path.name
-        rclone_config = get_rclone_config(short_code=mount_name.split(join_character)[0])
 
         code = ' '.join(['rclone',
                          'lsjson',
@@ -227,26 +284,23 @@ class lgdrive():
                          '--fast-list',
                          f'{mount_name}:{parent_path}',
                          ])
-
         output = subprocess.run(code, capture_output=True, shell=True)
-        assert output.returncode == 0, f'failed to get google id for {path}'
+        assert output.returncode == 0, f'failed to get google id for {path}:\n{output.stderr.decode()}'
         output = output.stdout.decode()
         output = output.split('\n')
         out_id = []
-        out_mtype = []
         for l in output:
             if file_name in l:
                 l = l.strip(',{}')
                 data = {e.split(':')[0].strip('"'): e.split(':')[1].strip('"') for e in l.split(',') if ':' in e}
                 if file_name == data['Name']:
                     out_id.append(data['ID'])
-                    out_mtype.append(data['MimeType'])
         if len(out_id) == 0:
             raise ValueError(f'failed to get google id for {path}')
         elif len(out_id) > 1:
             raise ValueError(f'found more than one match for {path}')
         else:
-            return out_id[0], out_mtype[0]
+            return out_id[0]
 
     def print_glink(self, path):
         """
@@ -276,17 +330,18 @@ class lgdrive():
             pass
         else:
             path = path.parent
-        gid, mtype = self.get_google_id(path)
+        gid = self.get_google_id(path)
         link = f'https://drive.google.com/drive/folders/{gid}'
         if open:
             webbrowser.open(link, new=0, autoraise=True)
         else:
             return link
 
-    def _mnt_previous_drives(self):  # todo
+    def _mnt_previous_drives(self):
         """
         mount all previous drives
         :return:
         """
-        raise NotImplementedError
-# todo user pyfire https://github.com/google/python-fire/ to make CLI
+        drives = read_mounted_drives()
+        for drive in drives:
+            self.mount_drive(drive)
