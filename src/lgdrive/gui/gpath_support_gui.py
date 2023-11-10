@@ -3,8 +3,8 @@ created matt_dumont
 on: 9/11/23
 """
 from PyQt6 import QtGui, QtWidgets, QtCore
-from utils.util_functions import LGDrive
-from path_support import icon_path
+from lgdrive.utils.util_functions import LGDrive
+from lgdrive.path_support import icon_path
 
 
 # keynote this class can be changed in the gooogle_drive_tray_pyqt class call to allow user specific

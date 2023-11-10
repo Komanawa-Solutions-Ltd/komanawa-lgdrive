@@ -8,13 +8,13 @@ from pathlib import Path
 from threading import Event
 
 sys.path.append(Path(__file__).parents[1])
-from path_support import icon_path
-from gui.add_user_gui import AddUser, ChangeShortcode
-from gui.add_remove_drives import AddRmDrives
-from gui.rm_user_gui import RmUser, ReAuthUser
-from utils.util_functions import LGDrive
-from gui.gpath_support_gui import Gpath
-from gui.setrclone_options import SetMntOptions
+from lgdrive.path_support import icon_path
+from lgdrive.gui.add_user_gui import AddUser, ChangeShortcode
+from lgdrive.gui.add_remove_drives import AddRmDrives
+from lgdrive.gui.rm_user_gui import RmUser, ReAuthUser
+from lgdrive.utils.util_functions import LGDrive
+from lgdrive.gui.gpath_support_gui import Gpath
+from lgdrive.gui.setrclone_options import SetMntOptions
 
 
 class GoogleDriveTrayApp:

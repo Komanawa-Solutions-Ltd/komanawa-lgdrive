@@ -18,91 +18,105 @@ Tested Distros
 
 Below is a non-exhaustive list of distros that this has been tested on. If you have tested this on a distro not listed below, please let me know so I can add it to the list.
 
-* Xubuntu 22.04
+* Xubuntu 22.04 (will likely work on all ubuntu based distros)
 
 yep that's it sorry!
+
+
+Linux Dependencies
+====================
+
+There are several linux packages that are required for this to work.  These can be installed with the following commands:
+
+.. code-block:: bash
+
+    sudo apt update
+    sudo apt install grep
+    sudo apt install rclone
+    sudo apt install tmux
+
+# todo check on fresh install
 
 Installation Applet
 ======================
 
-Applet Dependencies
-----------------------
-
-There are several linux packages that are required for this to work.  These can be installed with the following commands:
-
-# todo what else is needed???
-
-.. code-block:: bash
-
-    sudo apt update
-    sudo apt install grep
-    sudo apt install rclone
-    sudo apt install tmux
-
 Applet python environment
 ---------------------------
 
-The python environment can be installed with the following commands (conda):
+* python 3.9+
+* PyQt6 (pip install PyQt6)
+* python-fire  (pip install fire)
+
+The python environment and lgdrive can be installed with the following commands (conda):
 
 .. code-block:: bash
 
-    # todo this is junk
-    conda create -n google_drive python=3.8
+    conda create -n google_drive --channel conda-forge python fire
     conda activate google_drive
-    pip install -r requirements.txt
+    pip install PyQt6
+    pip install git+https://github.com/Komanawa-Solutions-Ltd/google_drive_linux
 
-or (pip)
-
-.. code-block::
-
-    # todo
-
-# todo make pip installable and how to add to startup
 
 Setting up auto start for the applet
 --------------------------------------
 
-# todo
+The applet launch script can be created by:
+
+.. code-block:: bash
+
+    echo "from lgdrive.gui import launch_panel_app" >>~/.local/bin/lgdrive_gui.py
+    echo "if __name__ == '__main__':" >>~/.local/bin/lgdrive_gui.py
+    echo "    launch_panel_app()" >>~/.local/bin/lgdrive_gui.py
+
+
+add [python bin] ~/.local/bin/lgdrive_gui.py to autostart # note that you may need to pass absolute paths if the .bashrc has not been sourced yet.
+
 
 Installation Command line interface (CLI)
 ======================================
 
-CLI Dependencies
-------------------
+CLI python environment / install
+-------------------------------------
 
-There are several linux packages that are required for this to work.  These can be installed with the following commands:
+* python 3.9+
+* python-fire (pip install fire)
+
+The python environment and lgdrive can be installed with the following commands (conda):
 
 .. code-block:: bash
 
-    sudo apt update
-    sudo apt install grep
-    sudo apt install rclone
-    sudo apt install tmux
-
-CLI python environment
------------------------
-
-The python environment can be installed with the following commands (conda):
-
-# todo below is junk
-.. code-block:: bash
-
-    conda create -n google_drive python=3.8
+    conda create -n google_drive --channel conda-forge python fire
     conda activate google_drive
-    pip install -r requirements.txt
+    pip install git+https://github.com/Komanawa-Solutions-Ltd/google_drive_linux
 
 
-Or (pip)
+Make easy executable
+-------------------------------------
 
-.. code-block::
+To make the easy executable run the following command:
 
-    # todo
+.. code-block:: bash
+
+    echo '!#'"$HOME/miniconda3/envs/google_drive/bin/python" >>~/.local/bin/lgdrive
+    # note you can substitute the path to the python interpreter for the above "$HOME/miniconda3/envs/google_drive/bin/python"
+
+    wget -O - http://whatever.com/page.php >>~/.local/bin/lgdrive
+    chmod +x ~/.local/bin/lgdrive
+
+
+Ensure that ~/.local/bin is in your path.  If it is not add the following to your ~/.bashrc:
+
+To launch the CLI run the following command:
+
+.. code-block:: bash
+
+    lgdrive
 
 
 CLI autostart
 --------------
 
-# todo
+# todo systemd? or startup...
 
 
 Method / Structure
@@ -189,8 +203,21 @@ There are some additional functionalities
 Command line interface
 ------------------------
 
-# todo
+The command line interface is a python fire wrapper for the LGDrive class.  It is designed to be used with the following workflow.  For more information using python fire see: https://github.com/google/python-fire
 
+Importantly the a -h flag following the command will give you more information about the command and its arguments.
+
+1. start LGDrive --> lgdrive start_google_drive  (or add this to auto start)
+2. add a user/email address --> lgdrive add_user [email_address] [shortcode]
+    1. The shortcode is used to identify the user/email address in the applet and in the file manager, ideally keep it short and memorable.  The mounted drive names will be "{short_code}@{drive_name}" (e.g. 'jojo@My_Drive')
+    2. The CLI will then have rclone authenticate the user/email address and list the available drives
+    3. Note the local arg
+3. list available drives --> ls_pos_drives [email|shortcode]
+4. mount a drive --> lgdrive mount_drive [drive_name]
+    1. This will open a qt window that will list the available drives for the user/email address and allow you to select the drives to mount/unmount
+    2. The applet will keep track of these drives and mount them on startup
+5. close LGDrive --> lgdrive close_google_drive
+    1. this will close all of the tmux sessions and unmount all of the drives, but the listed drives will be saved and will be mounted on lgdrive start_google_drive
 
 Extending path support
 ========================
@@ -199,6 +226,34 @@ The panel app has a 'Drive Path Support' option that allows you to copy and or o
 based on the path of the file in the local file system.  This is done by leveraging rclone lsjson and getting the google ID.
 
 There could be merits in extending the options available in this window to allow for more complex path support related to your use case.  If you want to do this you are able to pass a custom Gpath object to the app.  This object must be a subclass of gui.gpath_support_gui.Gpath.  You will need to override the "add_buttons" method to allow for the creation of new buttons/feature in the window.
+
+Possible Issues
+==================
+
+In the past I have had problems with rclone/google and IPv6. If you are having issues with rclone/google you may want to try disabling IPv6 on your system.  This can be done by:
+
+.. code-block:: bash
+
+    # from: https://linuxconfig.org/how-to-disable-ipv6-address-on-ubuntu-20-04-lts-focal-fossa
+    # in /etc/default/grub
+    # FROM:
+    # GRUB_CMDLINE_LINUX_DEFAULT=""
+    # TO:
+    # GRUB_CMDLINE_LINUX_DEFAULT="ipv6.disable=1"  (space delim)
+    # sudo update-grub
+
+Possible Improvements
+======================
+
+This is a space for me to keep track of possible improvements to the app.  If you have any suggestions please feel free to open an issue on the github page.
+
+* add a refresh mount option (e.g. via rclone rc vfs/refresh)
+
+
+Contributing
+==================
+
+If you would like to contribute to this project please feel free to fork the repo and submit a pull request.  If you have any questions or issues please feel free to open an issue on the github page. If you have any suggestions for improvements please open an issue on the github page. I obviously can't promise that I will implement them but I will try to take them into consideration.
 
 Distro Specific Notes
 =======================

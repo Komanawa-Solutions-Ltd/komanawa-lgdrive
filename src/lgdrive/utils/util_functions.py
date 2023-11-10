@@ -6,8 +6,8 @@ import traceback
 from pathlib import Path
 import subprocess
 import webbrowser
-from path_support import google_mount_dir, mount_options_path
-from utils.base_functions import join_character, get_rclone_config, get_drive_export_format, add_user_set_shortcode, \
+from lgdrive.path_support import google_mount_dir, mount_options_path
+from lgdrive.utils.base_functions import join_character, get_rclone_config, get_drive_export_format, add_user_set_shortcode, \
     update_master_config, create_config, get_user_shortcode, read_shortcodes, write_shortcodes, check_shortcode, \
     user_authenticated, list_users, get_prebuilt_mount_options, get_user_from_shortcode, list_active_drive_mounts, \
     list_drives_available, unmount_drive, close_google_drive, mount_drive, get_email_from_mountpoint_tmux_name, \

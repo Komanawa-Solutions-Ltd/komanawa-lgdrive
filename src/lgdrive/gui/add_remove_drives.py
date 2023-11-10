@@ -4,7 +4,7 @@ on: 17/10/23
 """
 import sys
 from PyQt6 import QtGui, QtWidgets, QtCore
-from path_support import icon_path
+from lgdrive.path_support import icon_path
 
 
 class AddRmDrives(QtWidgets.QWidget):
