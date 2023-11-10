@@ -11,12 +11,13 @@ from lgdrive.path_support import icon_path
 #  path management
 class Gpath(QtWidgets.QWidget):
     submitClicked = QtCore.pyqtSignal(str)
+    size = (500, 100)
 
     def __init__(self):
         super().__init__()
         self.setWindowIcon(QtGui.QIcon(str(icon_path)))
         self.setWindowTitle('Google Path support')
-        self.resize(500, 100)
+        self.resize(*self.size)
         self.lgdrive = LGDrive()
         # frame box
         vert = QtWidgets.QVBoxLayout()
@@ -105,3 +106,11 @@ class Gpath(QtWidgets.QWidget):
     def quit(self):
         self.submitClicked.emit('dummy')
         self.close()
+
+
+if __name__ == '__main__':
+    import sys
+    app = QtWidgets.QApplication([])
+    app.setQuitOnLastWindowClosed(False)
+    GDTA = Gpath()
+    sys.exit(app.exec())

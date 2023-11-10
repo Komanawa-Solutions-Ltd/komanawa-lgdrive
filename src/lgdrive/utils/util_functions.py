@@ -29,7 +29,7 @@ class LGDrive():
         if user is None:
             return mt_drives
         short_code = get_user_shortcode(user)
-        mt_drives = [e for e in mt_drives if short_code in e.split(join_character)[0]]
+        mt_drives = [e for e in mt_drives if short_code in e.split(join_character)[1]]
         return mt_drives
 
     @staticmethod
@@ -154,7 +154,7 @@ class LGDrive():
         path = Path(path)
         path = path.relative_to(google_mount_dir)
         mount_name = path.parts[0]
-        rclone_config = get_rclone_config(short_code=mount_name.split(join_character)[0], recreate_config=False)
+        rclone_config = get_rclone_config(short_code=mount_name.split(join_character)[1], recreate_config=False)
         if str(path) == mount_name:
             t = get_id_from_config(mount_name, rclone_config)
             if t == '':
@@ -326,7 +326,7 @@ class LGDrive():
         shortcodes = read_shortcodes()
         ushort_code = shortcodes.pop(user)
         all_mnts = list_active_drive_mounts()
-        mnts = [e for e in all_mnts if ushort_code == e.split(join_character)[0]]
+        mnts = [e for e in all_mnts if ushort_code == e.split(join_character)[1]]
         for mnt in mnts:
             unmount_drive(mnt)
         write_shortcodes(shortcodes)

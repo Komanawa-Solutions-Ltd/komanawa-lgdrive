@@ -185,8 +185,8 @@ def get_mnt_name_from_tmux_name(tmux_name):
 
 
 def get_tmuxnm_from_mnt_name(mnt_name):
-    shortcode, raw_drive_name = mnt_name.split(join_character)
-    return base_tmux_name.format(shortcode, raw_drive_name)
+    raw_drive_name, shortcode = mnt_name.split(join_character)
+    return base_tmux_name.format(raw_drive_name, shortcode)
 
 
 def get_mountpoint_tmux_name(raw_drive_name, shortcode=None, email_address=None):
@@ -197,8 +197,8 @@ def get_mountpoint_tmux_name(raw_drive_name, shortcode=None, email_address=None)
     if shortcode is None:
         shortcode = get_user_shortcode(email_address)
     assert shortcode is not None
-    tmux_nm = base_tmux_name.format(shortcode, raw_drive_name)
-    mp_name = join_character.join([shortcode, raw_drive_name])
+    tmux_nm = base_tmux_name.format(raw_drive_name, shortcode)
+    mp_name = join_character.join([raw_drive_name, shortcode])
     return tmux_nm, mp_name
 
 
@@ -213,9 +213,9 @@ def get_email_from_mountpoint_tmux_name(tmux_name=None, mp_name=None, return_ema
     assert tmux_name is not None or mp_name is not None, f'must provide tmux_name or mp_name'
     assert not (tmux_name is not None and mp_name is not None), f'cannot provide both tmux_name and mp_name'
     if tmux_name is not None:
-        shortcode, drive_name = tmux_name.split(join_character)[1:]
+        drive_name, shortcode = tmux_name.split(join_character)[1:]
     elif mp_name is not None:
-        shortcode, drive_name = mp_name.split(join_character)
+        drive_name, shortcode = mp_name.split(join_character)
     else:
         raise ValueError('should not get here')
 
