@@ -62,14 +62,22 @@ Setting up auto start for the applet
 
 The applet launch script can be created by:
 
+# TODO consider making this a shebang script as well.
+
 .. code-block:: bash
 
+    echo '#!'"$HOME/miniconda3/envs/google_drive/bin/python"
     echo "from lgdrive.gui import launch_panel_app" >>~/.local/bin/lgdrive_gui.py
     echo "if __name__ == '__main__':" >>~/.local/bin/lgdrive_gui.py
     echo "    launch_panel_app()" >>~/.local/bin/lgdrive_gui.py
+    chmod +x ~/.local/bin/lgdrive_gui.py
 
+Add the following to autostart:
 
-add [python bin] ~/.local/bin/lgdrive_gui.py to autostart # note that you may need to pass absolute paths if the .bashrc has not been sourced yet.
+.. code-block::
+    ~/.local/bin/lgdrive_gui.py
+
+Note that you may need to pass absolute paths if the .bashrc has not been sourced yet.
 
 
 Installation Command line interface (CLI)
