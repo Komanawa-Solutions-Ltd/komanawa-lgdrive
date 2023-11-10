@@ -15,6 +15,7 @@ setup(
     author_email="hansonmcoombs@gmail.com",
     packages=find_packages("src"),
     package_dir={"": "src"},
+    package_data={'lgdrive':['*.png']},
     setup_requires=[],
     tests_require=[],
     extras_require={},
