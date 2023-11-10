@@ -108,7 +108,7 @@ def create_config(email_address):
     with open(config_path, 'w') as f:
         for drive_nm, drive_info in possible_drives.items():
             teamid = drive_info['id']
-            if teamid == '':
+            if teamid != '':
                 team_statement = f'team_drive ={teamid}\n'
             else:
                 team_statement = f''
@@ -428,6 +428,8 @@ def write_options(options):
 
 
 def read_options():
+    if not mount_options_path.exists():
+        return get_prebuilt_mount_options('default')
     with mount_options_path.open('r') as f:
         lines = f.readlines()
     lines = [e.strip('\n') for e in lines]

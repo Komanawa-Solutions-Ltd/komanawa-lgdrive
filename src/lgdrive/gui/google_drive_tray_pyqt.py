@@ -256,18 +256,19 @@ class UserMenu(QtWidgets.QMenu):
 
         super().__init__()
         self.user = user
+        sc = self.parent.lgdrive._get_shortcode(self.user)
         self.menu_text = {
             'auth_user': f'Re-Authenticate {user}',
             'add_remove_drive': f'Add / Remove Drive(s) for {user}',
             'remove_user': f'Remove {user}',
+            'change_shortcode': f'Change Shortcode {sc}',
         }
 
         self.setTitle(self.user)
         self.parent = parent
-        sc = self.parent.lgdrive._get_shortcode(self.user)
         self.menu_actions = {
             'auth_user': self.auth_user,
-            f'change shortcode ({sc})': self.change_shortcode,
+            'change_shortcode': self.change_shortcode,
             'add_remove_drive': self.add_remove_drive,
             'remove_user': self.remove_user,
 
