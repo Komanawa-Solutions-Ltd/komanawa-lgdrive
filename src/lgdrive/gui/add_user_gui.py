@@ -91,7 +91,7 @@ class AddUser(QtWidgets.QWidget):
         self.close()
 
 
-class ChangeShortcode(QtWidgets.QWidget): # todo not showing up, fix/test
+class ChangeShortcode(QtWidgets.QWidget):
     submitClicked = QtCore.pyqtSignal(list)
 
     def __init__(self, user, current_shortcode):
