@@ -121,7 +121,7 @@ class LGDrive():
         if success:
             short_codes[user] = new_shortcode
             write_shortcodes(short_codes)
-            old_config = get_rclone_config(short_code=old_shortcode, recreate_config=False)
+            old_config = _get_config_path(short_code=old_shortcode)
             old_config.unlink(missing_ok=True)
             get_rclone_config(short_code=new_shortcode, recreate_config=True)
             mnted_drives = list_active_drive_mounts()
