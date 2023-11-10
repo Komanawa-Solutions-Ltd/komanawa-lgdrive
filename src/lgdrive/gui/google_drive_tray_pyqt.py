@@ -229,6 +229,7 @@ class GoogleDriveTrayApp:
         change, user, newcode = data
         if change:
             self.lgdrive.change_shortcode(user, newcode)
+            self.create_menu()
 
     def list_user_drives(self, user):
         return self.lgdrive._get_possible_drives(user)
