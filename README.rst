@@ -100,7 +100,7 @@ To make the easy executable run the following command:
     echo '!#'"$HOME/miniconda3/envs/google_drive/bin/python" >>~/.local/bin/lgdrive
     # note you can substitute the path to the python interpreter for the above "$HOME/miniconda3/envs/google_drive/bin/python"
 
-    wget -O - http://whatever.com/page.php >>~/.local/bin/lgdrive
+    wget -O - https://raw.githubusercontent.com/Komanawa-Solutions-Ltd/google_drive_linux/main/src/lgdrive/launch_cli.py >> ~/.local/bin/lgdrive
     chmod +x ~/.local/bin/lgdrive
 
 
