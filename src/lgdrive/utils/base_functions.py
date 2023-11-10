@@ -75,8 +75,6 @@ def _get_config_path(email_address=None, short_code=None):
         raise ValueError('must provide email_address or short_code, not both')
     if short_code is None:
         short_code = get_user_shortcode(email_address)
-    if email_address is None:
-        email_address = get_user_from_shortcode(short_code)
     config_name = f'.{short_code}.rclone.conf'
     config_path = base_configs.joinpath(config_name)
     return config_path
