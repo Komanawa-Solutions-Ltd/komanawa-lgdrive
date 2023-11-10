@@ -15,6 +15,7 @@ class AddRmDrives(QtWidgets.QWidget):
         self.setWindowIcon(QtGui.QIcon(str(icon_path)))
         self.setWindowTitle('Add/Remove Drives')
         self.user = user
+        self.resize(800, 400)
         lay = self.setup_layout()
         self.InactiveDrives.addItems(available_drives)
         self.ActiveDrives.addItems(current_drives)
