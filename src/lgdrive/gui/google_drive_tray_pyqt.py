@@ -17,6 +17,13 @@ from lgdrive.gui.gpath_support_gui import Gpath
 from lgdrive.gui.setrclone_options import SetMntOptions
 
 
+# todo add restart button to menu as oauth expiry while mounted will cause issues.
+# todo https://forum.rclone.org/t/how-to-extend-google-drive-token-expiration-date/36190/2
+# todo this could cause problems for long runs...... what to do
+# todo the tokens work fine and the .master_config file is updated with the new token, but the old token isn't replaced
+#  in the user specific config, so the user specific config will expire and the user will need to re-authenticate
+#  running recreate all configs fixes this, but I need to trigger it.
+
 class GoogleDriveTrayApp:
     menu_keys = (
         'gpath_support',
