@@ -205,7 +205,7 @@ class AddRmDrives(QtWidgets.QWidget):
         return r
 
     def cancel(self):
-        self.submitClicked.emit([self.user, None])
+        self.submitClicked.emit([(self.progress, self.progress_lab), self.user, None])
         self.close()
 
     def done(self):
