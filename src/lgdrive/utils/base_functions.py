@@ -257,7 +257,7 @@ def mount_drive(drivenm, recreate_config=False):
             f'rclone -v',
             f'--config {master_config}',
             f'--cache-dir {cache}',  # cache dir
-            '--drive-server-side-across-configs'  # allows server side setting of team drive (one remote)
+            '--drive-server-side-across-configs',  # allows server side setting of team drive (one remote)
             * options,  # mount options
             f'mount']
         if drive_id == '':
