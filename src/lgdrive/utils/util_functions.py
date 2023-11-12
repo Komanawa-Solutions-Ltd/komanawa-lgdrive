@@ -11,7 +11,7 @@ from lgdrive.utils.base_functions import join_character, get_rclone_config, get_
     update_master_config, create_config, get_user_shortcode, read_shortcodes, write_shortcodes, check_shortcode, \
     user_authenticated, list_users, get_prebuilt_mount_options, get_user_from_shortcode, list_active_drive_mounts, \
     list_drives_available, unmount_drive, close_google_drive, mount_drive, get_email_from_mountpoint_tmux_name, \
-    read_mounted_drives, _get_config_path, get_id_from_config, read_google_client, write_google_client
+    read_mounted_drives, _get_config_path, list_drives_in_config, read_google_client, write_google_client
 
 
 class LGDrive():
@@ -156,7 +156,7 @@ class LGDrive():
         mount_name = path.parts[0]
         rclone_config = get_rclone_config(short_code=mount_name.split(join_character)[1], recreate_config=False)
         if str(path) == mount_name:
-            t = get_id_from_config(mount_name, rclone_config)
+            t = list_drives_in_config(rclone_config)[mount_name]
             if t == '':
                 raise ValueError(f'failed to get google id for {path}')
             return t
