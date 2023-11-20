@@ -181,9 +181,9 @@ class LGDrive():
                 '--fast-list',
                 ]
         if mount_id == '':
-            code.append(f'{email}:')
+            code.append(f'{email}:{parent_path}')
         else:
-            code.append(f'{email},team_drive={mount_id}:')
+            code.append(f'{email},team_drive={mount_id}:{parent_path}')
         code = ' '.join(code)
         output = subprocess.run(code, capture_output=True, shell=True)
         assert output.returncode == 0, f'failed to get google id for {path}:\n{output.stderr.decode()}'
