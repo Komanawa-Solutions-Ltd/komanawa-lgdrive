@@ -6,8 +6,9 @@ import traceback
 from pathlib import Path
 import subprocess
 import webbrowser
-from lgdrive.path_support import google_mount_dir, mount_options_path
-from lgdrive.utils.base_functions import join_character, get_rclone_config, get_drive_export_format, add_user_set_shortcode, \
+from lgdrive.path_support import google_mount_dir, mount_options_path, master_config
+from lgdrive.utils.base_functions import join_character, get_rclone_config, get_drive_export_format, \
+    add_user_set_shortcode, \
     update_master_config, create_config, get_user_shortcode, read_shortcodes, write_shortcodes, check_shortcode, \
     user_authenticated, list_users, get_prebuilt_mount_options, get_user_from_shortcode, list_active_drive_mounts, \
     list_drives_available, unmount_drive, close_google_drive, mount_drive, get_email_from_mountpoint_tmux_name, \
@@ -145,7 +146,7 @@ class LGDrive():
         return t
 
     @staticmethod
-    def get_google_id(path):
+    def get_google_id(path):  # todo check
         """
         get the google ID for a given path
         :param path:
@@ -154,27 +155,36 @@ class LGDrive():
         path = Path(path)
         path = path.relative_to(google_mount_dir)
         mount_name = path.parts[0]
-        rclone_config = get_rclone_config(short_code=mount_name.split(join_character)[1], recreate_config=False)
+        drive_nm, short_code = get_email_from_mountpoint_tmux_name(mp_name=mount_name)
+        email = get_user_from_shortcode(short_code)
+        rclone_config = get_rclone_config(short_code=short_code, recreate_config=False)
+        mount_id = list_drives_in_config(rclone_config).get(mount_name, '')
         if str(path) == mount_name:
-            t = list_drives_in_config(rclone_config)[mount_name]
-            if t == '':
-                raise ValueError(f'failed to get google id for {path}')
-            return t
+            if mount_id == '':
+                rclone_config = get_rclone_config(short_code=mount_name.split(join_character)[1], recreate_config=True)
+                mount_id = list_drives_in_config(rclone_config)[mount_name]
+                if mount_id == '':
+                    raise ValueError(f'failed to get google id for {path}')
+            return mount_id
         path = path.relative_to(mount_name)
         parent_path = path.parent
         if str(parent_path) == '.':
             parent_path = ''
         file_name = path.name
 
-        code = ' '.join(['rclone',
-                         'lsjson',
-                         f'--drive-export-formats {get_drive_export_format()}',  # ensure constant file names
-                         '--config', str(rclone_config),
-                         '--no-mimetype',
-                         '--no-modtime',
-                         '--fast-list',
-                         f'{mount_name}:{parent_path}',
-                         ])
+        code = ['rclone',
+                'lsjson',
+                f'--drive-export-formats {get_drive_export_format()}',  # ensure constant file names
+                '--config', str(master_config),
+                '--no-mimetype',
+                '--no-modtime',
+                '--fast-list',
+                ]
+        if mount_id == '':
+            code.append(f'{email}:')
+        else:
+            code.append(f'{email},team_drive={mount_id}:')
+        code = ' '.join(code)
         output = subprocess.run(code, capture_output=True, shell=True)
         assert output.returncode == 0, f'failed to get google id for {path}:\n{output.stderr.decode()}'
         output = output.stdout.decode()
@@ -190,7 +200,7 @@ class LGDrive():
             raise ValueError(f'failed to get google id for {path}')
         elif len(out_id) > 1:
             print(out_id)
-            raise ValueError(f'found more than one match for {path}')
+            raise ValueError(f'found more than one match for {path}: {out_id}')
         else:
             print(out_id)
             return out_id[0]
