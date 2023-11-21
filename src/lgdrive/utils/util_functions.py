@@ -12,7 +12,8 @@ from lgdrive.utils.base_functions import join_character, get_rclone_config, get_
     update_master_config, create_config, get_user_shortcode, read_shortcodes, write_shortcodes, check_shortcode, \
     user_authenticated, list_users, get_prebuilt_mount_options, get_user_from_shortcode, list_active_drive_mounts, \
     list_drives_available, unmount_drive, close_google_drive, mount_drive, get_email_from_mountpoint_tmux_name, \
-    read_mounted_drives, _get_config_path, list_drives_in_config, read_google_client, write_google_client
+    read_mounted_drives, _get_config_path, list_drives_in_config, read_google_client, write_google_client, \
+    update_mounted_drives
 
 
 class LGDrive():
@@ -390,3 +391,7 @@ class LGDrive():
             unmount_drive(drivenm)
         else:
             print(f'{drivenm} was not mounted')
+
+    @staticmethod
+    def _update_from_drivelist(add_drive=None, remove_drive=None):
+        update_mounted_drives(add_drive=add_drive, remove_drive=remove_drive)

@@ -185,14 +185,23 @@ class GoogleDriveTrayApp:
             print(t)
             proglab.setText(t)
             progresbar.setValue(int(i / nactions * 100))
-            self.lgdrive.mount_drive(d)
+            try:
+                self.lgdrive.mount_drive(d)
+            except Exception as val:
+                self._launch_error(f'error for add/remove drives:\n{val} removing from mount list')
+                self.lgdrive._update_from_drivelist(remove_drive=d)
+
             i += 1
         for d in rm_drives:
             progresbar.setValue(int(i / nactions * 100))
             t = f'Removing drive for {user}: {d}'
             print(t)
             proglab.setText(t)
-            self.lgdrive.unmount_drive(d)
+            try:
+                self.lgdrive.unmount_drive(d)
+            except Exception as val:
+                self._launch_error(f'error for add/remove drives:\n{val} removing from mount list')
+                self.lgdrive._update_from_drivelist(remove_drive=d)
             i += 1
 
     def _remove_user_window(self, user):
