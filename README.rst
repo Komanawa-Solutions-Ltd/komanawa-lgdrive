@@ -111,7 +111,7 @@ To make the easy executable run the following command:
 
 
 Ensure that ~/.local/bin is in your path.  If it is not add the following to your ~/.bashrc:
-
+# todo
 To launch the CLI run the following command:
 
 .. code-block:: bash
