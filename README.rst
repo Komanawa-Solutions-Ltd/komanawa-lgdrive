@@ -122,7 +122,9 @@ To launch the CLI run the following command:
 CLI autostart
 --------------
 
-# todo systemd? or startup...
+.. code-block::
+
+    echo "lgdrive start_google_drive" >> ~/.bashrc
 
 
 Method / Structure
