@@ -36,7 +36,6 @@ There are several linux packages that are required for this to work.  These can 
     sudo apt install tmux
     sudo apt install libxcb-cursor0 # only needed for panel app
 
-# todo check on fresh install
 
 Installation Applet
 ======================
