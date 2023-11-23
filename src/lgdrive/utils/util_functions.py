@@ -324,6 +324,7 @@ class LGDrive():
         users = list_users()
         for user in users:
             self.rm_user(user)
+        master_config.unlink(missing_ok=True)
 
     @staticmethod
     def rm_user(user):
