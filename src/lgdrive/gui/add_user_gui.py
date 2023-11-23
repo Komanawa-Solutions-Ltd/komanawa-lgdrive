@@ -72,7 +72,7 @@ class AddUser(QtWidgets.QWidget):
             problem = True
             mssage += 'Email address already exists\n'
 
-        success, message = check_shortcode(shortcode)
+        success, message = check_shortcode(email=email, shortcode=shortcode)
         if not success:
             problem = True
             mssage += message + '\n'
@@ -138,7 +138,7 @@ class ChangeShortcode(QtWidgets.QWidget):
         shortcode = self.shortcode.text().strip().lower()
         problem = False
         mssage = ''
-        success, message = check_shortcode(shortcode)
+        success, message = check_shortcode(email=self.user, shortcode=shortcode)
         if not success:
             problem = True
             mssage += message + '\n'

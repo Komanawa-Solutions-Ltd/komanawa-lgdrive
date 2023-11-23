@@ -120,7 +120,7 @@ class LGDrive():
         """
         short_codes = read_shortcodes()
         old_shortcode = get_user_shortcode(user)
-        success, mssage = check_shortcode(new_shortcode, short_codes)
+        success, mssage = check_shortcode(email=user, shortcode=new_shortcode, short_codes=short_codes)
         if success:
             short_codes[user] = new_shortcode
             write_shortcodes(short_codes)

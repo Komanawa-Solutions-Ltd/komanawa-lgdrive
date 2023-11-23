@@ -317,15 +317,16 @@ def get_user_shortcode(email_address):
     return read_shortcodes()[email_address]
 
 
-def check_shortcode(shortcode, short_codes=None):
+def check_shortcode(email, shortcode, short_codes=None):
     if short_codes is None:
         short_codes = read_shortcodes()
     inv = {v: k for k, v in short_codes.items()}
     success = True
     mssage = ''
     if shortcode in short_codes.values():
-        success = False
-        mssage = f'{shortcode} already in use for {inv[shortcode]}'
+        if not inv[shortcode] == email:
+            success = False
+            mssage = f'{shortcode} already in use for {inv[shortcode]}'
     elif any([e in shortcode for e in bad_shortcode_char]):
         success = False
         mssage = f'bad characters in {shortcode}, cannot use {bad_shortcode_char}'
@@ -340,7 +341,7 @@ def add_user_set_shortcode(email_address, shortcode=None):
     if shortcode is None:
         shortcode = email_address.split('@')[0]
     short_codes = read_shortcodes()
-    success, mssage = check_shortcode(shortcode, short_codes)
+    success, mssage = check_shortcode(email=email_address, shortcode=shortcode, short_codes=short_codes)
     if success:
         short_codes[email_address] = shortcode
         write_shortcodes(short_codes)
