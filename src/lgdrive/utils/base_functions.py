@@ -130,23 +130,14 @@ def get_auth_code(email_address, local=True):
         assert output.returncode == 0, f'failed to authenticate {email_address}'
         output = output.stdout.decode()
     else:
-        output = []
         code += ' --auth-no-open-browser'
-        process = subprocess.Popen(code, shell=True, stdout=subprocess.PIPE)
-        print_output = True
-        while process.poll() is None:
-            nextline = process.stdout.readline()
-            if nextline == '':
-                continue
-            t = nextline.decode().strip()
-            output.append(t)
-            if 'paste' in t.lower():
-                print_output = False
-            if print_output:
-                print(t)
-            output = '\n'.join(output)
+        statement = ('Execute the following on the machine with the web browser (same rclone version recommended):\n\n'
+                     f'\t\t{code}\n\n')
 
+        print(statement)
+        output = input('Paste the output from your local machine here:\n')
     output = output[output.find('{'):output.find('}') + 1]
+
     return output
 
 
