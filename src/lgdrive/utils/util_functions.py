@@ -90,7 +90,7 @@ class LGDrive():
     def _user_authenticated(user):
         """
         check if a user is authenticated
-        :param user:
+        :param user: email address
         :return:
         """
         users = list_users()
@@ -98,11 +98,12 @@ class LGDrive():
         return user_authenticated(user)
 
     @staticmethod
-    def add_user(user, short_code, local=True):
+    def add_user(user, short_code, local=False):
         """
         add the user and shortcode, update the master config, then create the config
-        :param user:
-        :param short_code:
+        :param user: email address
+        :param short_code: short code for the user, must be unique
+        :param local: if True launch authentication in local browser, if False print link to authenticate
         :return:
         """
         success, mssage = add_user_set_shortcode(user, short_code)
@@ -150,7 +151,7 @@ class LGDrive():
     def get_google_id(path):  # todo check
         """
         get the google ID for a given path
-        :param path:
+        :param path: path to file or folder
         :return:
         """
         path = Path(path)
@@ -233,6 +234,7 @@ class LGDrive():
     def ls_users(detailed=False):
         """
         list all users
+        :param detailed: if True, print more information about the users
         :return:
         """
         users = list_users()
@@ -256,7 +258,7 @@ class LGDrive():
     def mount_drive(drivenm):
         """
         mount a drive
-        :param drivenm:
+        :param drivenm: drive name (shortcode + drive name) which is returned by ls_pos_drives
         :return:
         """
         mount_drive(drivenm)
@@ -279,10 +281,11 @@ class LGDrive():
         print(link)
 
     @staticmethod
-    def reauthenticate_user(user, local=True):
+    def reauthenticate_user(user, local=False):
         """
         re authenicate an existing user
-        :param user:
+        :param user: email address
+        :param local: if True launch authentication in local browser, if False print link to authenticate
         :return:
         """
         users = list_users()
@@ -330,7 +333,7 @@ class LGDrive():
     def rm_user(user):
         """
         remove the user and shortcode, update the master config, then delete the user specific config
-        :param user:
+        :param user: email address
         :return:
         """
         _get_config_path(email_address=user).unlink(missing_ok=True)
@@ -346,6 +349,10 @@ class LGDrive():
     def set_google_client(self, client_id, client_secret):
         """
         set the google client id
+        see https://github.com/Komanawa-Solutions-Ltd/google_drive_linux#google-client-id-and-secret
+        for more information
+        :param client_id: google client id
+        :param client_secret: google client secret
         :return:
         """
         write_google_client(client_id, client_secret)
@@ -356,7 +363,7 @@ class LGDrive():
         """
         set the mount options to a prebuilt option
         :param option_name: one of the prebuilt options ('light', 'default')
-        :param remount:
+        :param remount: if True, remount all drives otherwise updates will only be applied to new drives
         :return:
         """
         t = get_prebuilt_mount_options(option_name)

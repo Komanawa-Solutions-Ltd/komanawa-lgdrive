@@ -85,7 +85,7 @@ class GoogleDriveTrayApp:
         print(f"Adding user: {user}")
         if add:
             try:
-                self.lgdrive.add_user(user, shortcode)
+                self.lgdrive.add_user(user, shortcode, local=True)
             except Exception as val:
                 self._launch_error(f'error for add user:\n{val}')
                 self.sub_window_user.close()
@@ -105,7 +105,7 @@ class GoogleDriveTrayApp:
         auth, user = data
         try:
             if auth:
-                self.lgdrive.reauthenticate_user(user)
+                self.lgdrive.reauthenticate_user(user, local=True)
         except Exception as val:
             self._launch_error(f'error for re-auth user:\n{val}')
             self.sub_window_auth.close()
