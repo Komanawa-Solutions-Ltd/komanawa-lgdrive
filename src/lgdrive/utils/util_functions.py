@@ -370,10 +370,10 @@ class LGDrive():
         mount_options_path.write_text('\n'.join(t))
         print(f'mount options set to {option_name}')
         if remount:
-            self.stop_google_drive()
-            self.start_google_drive()
+            self.stop_drive()
+            self.start_drive()
 
-    def start_google_drive(self):
+    def start_drive(self):
         """
         start google drive, this is what gets called at start of session
         :return:
@@ -381,7 +381,7 @@ class LGDrive():
         self.recreate_all_configs()
         self._mnt_previous_drives()
 
-    def stop_google_drive(self):
+    def stop_drive(self):
         """
         stop google drive, this is what gets called at end of session
         :return:

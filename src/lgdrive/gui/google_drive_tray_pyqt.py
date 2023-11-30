@@ -37,7 +37,7 @@ class GoogleDriveTrayApp:
         self.sheetstyle = f"color: black; "
         self.gpath_support_gui = gpath_support
         self.lgdrive = LGDrive()
-        self.lgdrive.start_google_drive()
+        self.lgdrive.start_drive()
         self.event = Event()
         self.app = app
         self.tray = QtWidgets.QSystemTrayIcon()
@@ -255,7 +255,7 @@ class GoogleDriveTrayApp:
 
     def close(self):
         print('closing')
-        self.lgdrive.stop_google_drive()
+        self.lgdrive.stop_drive()
         self.event.set()
         self.app.quit()
 
