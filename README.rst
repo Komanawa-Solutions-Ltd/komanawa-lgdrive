@@ -124,6 +124,7 @@ CLI autostart
 
 .. code-block::
 
+    echo 'export PATH="$PATH:$HOME/.local/bin"' >> ~/.bashrc
     echo "lgdrive start_google_drive" >> ~/.bashrc
 
 
