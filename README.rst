@@ -28,11 +28,24 @@ Linux Dependencies
 
 There are several linux packages that are required for this to work.  These can be installed with the following commands:
 
+Rclone
+----------
+
+As of writing the snap install of rclone does not allow the "mount" command and the apt install rclone is VERY out of date so we suggest installing rclone via their installation method (https://rclone.org/install/)
+
+.. code-block:: bash
+
+   curl https://rclone.org/install.sh | sudo bash
+
+
+Other dependencies
+--------------------
+
+
 .. code-block:: bash
 
     sudo apt update
     sudo apt install grep
-    sudo apt install rclone
     sudo apt install tmux
     sudo apt install libxcb-cursor0 # only needed for panel app
 
