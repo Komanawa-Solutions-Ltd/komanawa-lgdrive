@@ -138,8 +138,9 @@ CLI autostart
 .. code-block::
 
     echo 'export PATH="$PATH:$HOME/.local/bin"' >> ~/.bashrc
-    echo "lgdrive start_google_drive -quickstart" >> ~/.bashrc .. todo check this works
+    echo "lgdrive start_google_drive --quick_start" >> ~/.bashrc
 
+Note the --quick_start flag will start the google drive without recreating the configs unless an exception is raise. This is useful for auto start as it is much faster if/when sourcing the bashrc.
 
 Method / Structure
 =====================
