@@ -138,7 +138,7 @@ CLI autostart
 .. code-block::
 
     echo 'export PATH="$PATH:$HOME/.local/bin"' >> ~/.bashrc
-    echo "lgdrive start_google_drive" >> ~/.bashrc
+    echo "lgdrive start_google_drive -quickstart" >> ~/.bashrc .. todo check this works
 
 
 Method / Structure

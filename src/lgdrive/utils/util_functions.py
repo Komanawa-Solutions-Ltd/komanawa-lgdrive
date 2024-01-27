@@ -373,13 +373,21 @@ class LGDrive():
             self.stop_drive()
             self.start_drive()
 
-    def start_drive(self):
+    def start_drive(self, quick_start=False):
         """
         start google drive, this is what gets called at start of session
+        :param quick_start: if True, will not recreate all configs
         :return:
         """
-        self.recreate_all_configs()
-        self._mnt_previous_drives()
+        if quick_start:
+            try:
+                self._mnt_previous_drives()
+            except Exception:
+                self.recreate_all_configs()
+                self._mnt_previous_drives()
+        else:
+            self.recreate_all_configs()
+            self._mnt_previous_drives()
 
     def stop_drive(self):
         """
