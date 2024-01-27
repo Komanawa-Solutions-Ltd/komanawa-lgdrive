@@ -77,7 +77,7 @@ The applet launch script can be created by:
 
 .. code-block:: bash
 
-    mkdir $HOME/.local/bin
+    mkdir $HOME/.local/bin -p
     echo '#!'"$HOME/miniconda3/envs/google_drive/bin/python" >>~/.local/bin/lgdrive_gui.py
     echo "from lgdrive.gui import launch_panel_app" >>~/.local/bin/lgdrive_gui.py
     echo "if __name__ == '__main__':" >>~/.local/bin/lgdrive_gui.py
@@ -117,7 +117,7 @@ To make the easy executable run the following command:
 
 .. code-block:: bash
 
-    mkdir $HOME/.local/bin
+    mkdir $HOME/.local/bin -p
     echo '#!'"$HOME/miniconda3/envs/google_drive/bin/python" >>~/.local/bin/lgdrive
     # note you can substitute the path to the python interpreter for the above "$HOME/miniconda3/envs/google_drive/bin/python"
 
