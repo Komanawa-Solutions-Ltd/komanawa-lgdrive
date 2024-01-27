@@ -138,7 +138,7 @@ CLI autostart
 .. code-block::
 
     echo 'export PATH="$PATH:$HOME/.local/bin"' >> ~/.bashrc
-    echo "lgdrive start_google_drive --quick_start" >> ~/.bashrc
+    echo "lgdrive start_drive --quick_start" >> ~/.bashrc
 
 Note the --quick_start flag will start the google drive without recreating the configs unless an exception is raise. This is useful for auto start as it is much faster if/when sourcing the bashrc.
 
@@ -230,7 +230,7 @@ The command line interface is a python fire wrapper for the LGDrive class.  It i
 
 Importantly the a -h flag following the command will give you more information about the command and its arguments.
 
-1. start LGDrive --> lgdrive start_google_drive  (or add this to auto start)
+1. start LGDrive --> lgdrive start_drive  (or add this to auto start)
 2. add a user/email address --> lgdrive add_user [email_address] [shortcode]
     1. The shortcode is used to identify the user/email address in the applet and in the file manager, ideally keep it short and memorable.  The mounted drive names will be "{short_code}@{drive_name}" (e.g. 'jojo@My_Drive')
     2. The CLI will then have rclone authenticate the user/email address and list the available drives
