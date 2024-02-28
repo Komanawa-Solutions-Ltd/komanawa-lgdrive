@@ -4,9 +4,9 @@ on: 9/11/23
 """
 
 from PyQt6 import QtGui, QtWidgets, QtCore
-from lgdrive.utils.base_functions import ava_mount_options
-from lgdrive.utils.util_functions import LGDrive
-from lgdrive.path_support import mount_options_path, icon_path
+from komanawa.lgdrive.utils.base_functions import ava_mount_options
+from komanawa.lgdrive.utils.util_functions import LGDrive
+from komanawa.lgdrive.path_support import mount_options_path, icon_path
 
 
 class SetMntOptions(QtWidgets.QWidget):

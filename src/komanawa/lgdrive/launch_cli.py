@@ -4,7 +4,7 @@ on: 9/11/23
 """
 
 import fire
-from lgdrive.utils.util_functions import LGDrive
+from komanawa.lgdrive.utils.util_functions import LGDrive
 import os
 
 os.environ["PAGER"] = "cat"
