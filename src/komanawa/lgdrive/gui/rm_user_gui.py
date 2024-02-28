@@ -4,7 +4,7 @@ on: 17/10/23
 """
 
 from PyQt6 import QtGui, QtWidgets, QtCore
-from lgdrive.path_support import icon_path
+from komanawa.lgdrive.path_support import icon_path
 class RmUser(QtWidgets.QWidget):
     submitClicked = QtCore.pyqtSignal(list)
 

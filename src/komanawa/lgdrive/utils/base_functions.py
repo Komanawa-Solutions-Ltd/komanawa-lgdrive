@@ -5,7 +5,7 @@ on: 17/09/23
 import re
 import time
 import subprocess
-from lgdrive.path_support import google_mount_dir, google_cache_dir, base_configs, short_code_path, mount_options_path, \
+from komanawa.lgdrive.path_support import google_mount_dir, google_cache_dir, base_configs, short_code_path, mount_options_path, \
     master_config, mounted_drives_path, google_client_path
 
 join_character = '@'

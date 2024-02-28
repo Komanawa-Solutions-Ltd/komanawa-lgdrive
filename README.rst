@@ -67,7 +67,7 @@ The python environment and lgdrive can be installed with the following commands 
     conda create -n google_drive --channel conda-forge python fire
     conda activate google_drive
     pip install PyQt6
-    pip install git+https://github.com/Komanawa-Solutions-Ltd/google_drive_linux
+    pip install git+https://github.com/Komanawa-Solutions-Ltd/komanawa-lgdrive.git
 
 
 Setting up auto start for the applet
@@ -79,7 +79,7 @@ The applet launch script can be created by:
 
     mkdir $HOME/.local/bin -p
     echo '#!'"$HOME/miniconda3/envs/google_drive/bin/python" >>~/.local/bin/lgdrive_gui.py
-    echo "from lgdrive.gui import launch_panel_app" >>~/.local/bin/lgdrive_gui.py
+    echo "from komanawa.lgdrive.gui import launch_panel_app" >>~/.local/bin/lgdrive_gui.py
     echo "if __name__ == '__main__':" >>~/.local/bin/lgdrive_gui.py
     echo "    launch_panel_app()" >>~/.local/bin/lgdrive_gui.py
     chmod +x ~/.local/bin/lgdrive_gui.py
@@ -107,7 +107,7 @@ The python environment and lgdrive can be installed with the following commands 
 
     conda create -n google_drive --channel conda-forge python fire
     conda activate google_drive
-    pip install git+https://github.com/Komanawa-Solutions-Ltd/google_drive_linux
+    pip install git+https://github.com/Komanawa-Solutions-Ltd/komanawa-lgdrive.git
 
 
 Make easy executable
@@ -121,7 +121,7 @@ To make the easy executable run the following command:
     echo '#!'"$HOME/miniconda3/envs/google_drive/bin/python" >>~/.local/bin/lgdrive
     # note you can substitute the path to the python interpreter for the above "$HOME/miniconda3/envs/google_drive/bin/python"
 
-    wget -O - https://raw.githubusercontent.com/Komanawa-Solutions-Ltd/google_drive_linux/main/src/lgdrive/launch_cli.py >> ~/.local/bin/lgdrive
+    wget -O - https://raw.githubusercontent.com/Komanawa-Solutions-Ltd/google_drive_linux/main/src/komanawa/lgdrive/launch_cli.py >> ~/.local/bin/lgdrive
     chmod +x ~/.local/bin/lgdrive
 
 

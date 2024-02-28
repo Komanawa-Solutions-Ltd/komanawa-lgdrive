@@ -5,8 +5,8 @@ on: 7/10/23
 from copy import deepcopy
 import sys
 from PyQt6 import QtGui, QtWidgets, QtCore
-from lgdrive.utils.base_functions import check_shortcode, bad_shortcode_char
-from lgdrive.path_support import icon_path
+from komanawa.lgdrive.utils.base_functions import check_shortcode, bad_shortcode_char
+from komanawa.lgdrive.path_support import icon_path
 
 
 class AddUser(QtWidgets.QWidget):
