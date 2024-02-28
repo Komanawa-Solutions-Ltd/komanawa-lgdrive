@@ -13,7 +13,7 @@ setup(
     # Author details
     author="Matt Dumont",
     author_email="hansonmcoombs@gmail.com",
-    packages=find_namespace_packages(where='src/', include=['komanawa.lgdrive']),
+    packages=find_namespace_packages(where='src/'),
     package_dir={"": "src"},
     package_data={'komanawa/lgdrive':['*.png']},
     setup_requires=[],
