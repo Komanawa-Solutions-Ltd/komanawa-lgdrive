@@ -3,7 +3,7 @@ created matt_dumont
 on: 24/03/22
 """
 import os
-from setuptools import setup, find_packages
+from setuptools import setup, find_packages, find_namespace_packages
 
 BUILD_ID = os.environ.get("BUILD_BUILDID", "0")
 
