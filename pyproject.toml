@@ -1,0 +1,37 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.packages.find]
+where = ["src/"]
+
+[tool.setuptools.package-data]
+"*" = ["*.png"]
+
+[project]
+name = "komanawa-lgdrive"
+version = "v1.1.0"
+authors = [
+    { name = "Matt Dumont", email = "Matt@komanawa.com" },
+]
+description = "A package to manage groundwater age distributions"
+readme = "README.rst"
+license = { file = "LICENSE" }
+requires-python = ">=3.9"
+dependencies = [
+    "fire"
+]
+
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+
+[project.urls]
+Homepage = "https://github.com/Komanawa-Solutions-Ltd/komanawa-lgdrive"
+Issues = "https://github.com/Komanawa-Solutions-Ltd/komanawa-lgdrive/issues"
+Documentation = "https://github.com/Komanawa-Solutions-Ltd/komanawa-lgdrive"
