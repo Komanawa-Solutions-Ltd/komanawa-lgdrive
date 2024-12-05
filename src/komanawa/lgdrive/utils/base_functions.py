@@ -4,6 +4,7 @@ on: 17/09/23
 """
 import json
 import re
+import socket
 import time
 import subprocess
 from komanawa.lgdrive.path_support import google_mount_dir, google_cache_dir, base_configs, short_code_path, \
@@ -285,7 +286,8 @@ def prime_mount(port):
 
 
 def get_port(drive_name):
-    base_port = 40000
+
+
     if shortcode_port_path.exists():
         with shortcode_port_path.open('r') as f:
             lines = f.readlines()
@@ -294,17 +296,16 @@ def get_port(drive_name):
         lines = {k: v for k, v in lines}
     else:
         lines = {}
-    if drive_name in lines:
-        return lines[drive_name] + base_port
-    else:
-        if len(lines) == 0:
-            lines[drive_name] = 0
-        else:
-            lines[drive_name] = max([int(e) for e in lines.values()]) + 1
+    if drive_name not in lines:
+        sock = socket.socket()
+        sock.bind(('', 0))
+        port = sock.getsockname()[1]
+        sock.close()
+        lines[drive_name] = port
         with shortcode_port_path.open('w') as f:
             for k, v in lines.items():
                 f.write(f'{k}={v}\n')
-        return lines[drive_name] + base_port
+    return lines[drive_name]
 
 
 def list_active_drive_mounts():

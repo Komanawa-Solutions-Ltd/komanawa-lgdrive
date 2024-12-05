@@ -13,7 +13,7 @@ where = ["src/"]
 
 [project]
 name = "komanawa-lgdrive"
-version = "v1.1.0"
+version = "v1.1.1"
 authors = [
     { name = "Matt Dumont", email = "Matt@komanawa.com" },
 ]
