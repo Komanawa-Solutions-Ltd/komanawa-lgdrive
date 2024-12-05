@@ -3,7 +3,7 @@ Template created by matt_dumont
 on: 22/03/22
 """
 from pathlib import Path
-
+import tempfile
 proj_root = Path(__file__).parent  # base of git repo
 google_mount_dir = Path.home().joinpath('google_mount_point')
 google_mount_dir.mkdir(exist_ok=True)
@@ -19,3 +19,5 @@ mount_options_path = base_configs.joinpath('.mount_options')
 icon_path = proj_root.joinpath('logo2.png')
 mounted_drives_path = base_configs.joinpath('.mounted_drives')
 google_client_path = base_configs.joinpath('.google_client')
+shortcode_port_path = Path(tempfile.mkdtemp(prefix='lgdrive')).joinpath('.shortcode_port')
+

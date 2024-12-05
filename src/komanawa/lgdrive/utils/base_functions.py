@@ -2,16 +2,18 @@
 created matt_dumont 
 on: 17/09/23
 """
+import json
 import re
 import time
 import subprocess
-from komanawa.lgdrive.path_support import google_mount_dir, google_cache_dir, base_configs, short_code_path, mount_options_path, \
-    master_config, mounted_drives_path, google_client_path
+from komanawa.lgdrive.path_support import google_mount_dir, google_cache_dir, base_configs, short_code_path, \
+    mount_options_path, \
+    master_config, mounted_drives_path, google_client_path, shortcode_port_path
 
 join_character = '@'
 bad_shortcode_char = (' ', '\t', '\n', '\r', '/', '\\', '?', '<', '>', '|', ':', '*', '"', "'", '=', join_character)
 base_tmux_name = f'*gd{join_character}' + '{}' + join_character + '{}'
-
+baseip = '127.0.0.1'
 ava_mount_options = (
     'default',
     'light',
@@ -30,9 +32,8 @@ base_mount_options = (
     '--stats=0',  # disables printing of stats
     '--bwlimit=200M',  # up and down limits
     '--vfs-cache-mode full',
-    '--vfs-cache-poll-interval 30s',
+    '--vfs-cache-poll-interval 1m',
     '--vfs-cache-max-size 50G',
-    '--vfs-read-ahead 500M',
     '--drive-pacer-burst 200',  # Number of API calls to allow without sleeping.
     '--drive-pacer-min-sleep 10ms',  # Minimum time to sleep between API calls.
     '--drive-chunk-size 256M',
@@ -40,8 +41,10 @@ base_mount_options = (
     '--drive-upload-cutoff 256M',  # Cutoff for switching to chunked upload.
 
     # --drive-list-chunk 1000 #  do not understand
-    # dir-cache-time Duration (default 5m0s)  # time to re-look for directories... 5m seems about right
-    '--vfs-cache-max-age 24h',
+
+    '--vfs-cache-max-age 5000h',
+    '--attr-timeout 5000h',
+    '--dir-cache-time 5000h',
 )  # Max time since last access of objects in the cache (default 1h0m0s)
 
 
@@ -249,16 +252,19 @@ def mount_drive(drivenm, recreate_config=False):
             f'--config {master_config}',
             f'--cache-dir {cache}',  # cache dir
             '--drive-server-side-across-configs',  # allows server side setting of team drive (one remote)
-            * options,  # mount options
+            *options,  # mount options
             f'mount']
         if drive_id == '':
             code.append(f'{email}:')
         else:
             code.append(f'{email},team_drive={drive_id}:')
-
+        port = get_port(drivenm)
         code.append(f'{mount_dir}')
+        code.append('--rc')
+        code.append(f'--rc-addr {baseip}:{port}')
         code = ' '.join(code)
-        subprocess.run(code, shell=True)
+        t = subprocess.run(code, shell=True)
+
         success = True
         error = ''
         if not is_mounted(drivenm):
@@ -267,14 +273,38 @@ def mount_drive(drivenm, recreate_config=False):
         # write to mounted drives file
         if success:
             update_mounted_drives(add_drive=drivenm)
-        prime_mount(tmux_nm)
+        prime_mount(port)
         return success, error
 
 
-def prime_mount(tmux_name):
-    # todo lots of folks rc vfs/refresh recursive=true, but I have not figured it out yet
-    # rclone rc vfs/refresh recursive=true 'dir=Media/'
-    pass
+def prime_mount(port):
+    time.sleep(1)
+    code = (f'rclone rc vfs/refresh recursive=true --drive-pacer-burst 200 '
+            f'--drive-pacer-min-sleep 10ms --timeout 30m --rc-addr {baseip}:{port}')
+    subprocess.Popen(code, start_new_session=True, shell=True)
+
+
+def get_port(drive_name):
+    base_port = 40000
+    if shortcode_port_path.exists():
+        with shortcode_port_path.open('r') as f:
+            lines = f.readlines()
+        lines = [e.strip('\n') for e in lines]
+        lines = [e.split('=') for e in lines]
+        lines = {k: v for k, v in lines}
+    else:
+        lines = {}
+    if drive_name in lines:
+        return lines[drive_name] + base_port
+    else:
+        if len(lines) == 0:
+            lines[drive_name] = 0
+        else:
+            lines[drive_name] = max([int(e) for e in lines.values()]) + 1
+        with shortcode_port_path.open('w') as f:
+            for k, v in lines.items():
+                f.write(f'{k}={v}\n')
+        return lines[drive_name] + base_port
 
 
 def list_active_drive_mounts():

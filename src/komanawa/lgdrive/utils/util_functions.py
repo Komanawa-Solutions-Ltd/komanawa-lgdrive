@@ -148,7 +148,7 @@ class LGDrive():
         return t
 
     @staticmethod
-    def get_google_id(path):  # todo check
+    def get_google_id(path):
         """
         get the google ID for a given path
         :param path: path to file or folder
